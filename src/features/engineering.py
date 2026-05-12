@@ -7,14 +7,22 @@ from typing import List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-# Major tidal constituents with their periods in hours
+# Eight tidal constituents with their periods in hours.
+# Five core (M2, S2, K1, O1, N2) + three added from HarmonicNetPrototype
+# (dcablayan/tideformer): shallow-water M4/M6 and long-period Mm.
 TIDAL_CONSTITUENTS = {
-    "M2": 12.4206,   # principal lunar semi-diurnal
-    "S2": 12.0000,   # principal solar semi-diurnal
-    "K1": 23.9345,   # lunisolar diurnal
-    "O1": 25.8193,   # principal lunar diurnal
-    "N2": 12.6583,   # larger lunar elliptic semi-diurnal
+    "M2": 12.4206,    # principal lunar semi-diurnal
+    "S2": 12.0000,    # principal solar semi-diurnal
+    "K1": 23.9345,    # lunisolar diurnal
+    "O1": 25.8193,    # principal lunar diurnal
+    "N2": 12.6583,    # larger lunar elliptic semi-diurnal
+    "M4": 6.2103,     # shallow-water overtide of M2
+    "M6": 4.1402,     # shallow-water overtide of M2 (3rd harmonic)
+    "Mm": 327.8599,   # lunar monthly (27.32 days)
 }
+
+# Synodic (full-cycle) lunar month in hours — for lunar-phase feature
+_LUNAR_SYNODIC_HOURS = 29.53 * 24.0
 
 EPOCH = pd.Timestamp("1970-01-01", tz="UTC")
 
@@ -36,6 +44,26 @@ def add_tidal_harmonics(
         omega = 2 * np.pi / period_h
         df[f"tide_sin_{name}"] = np.sin(omega * t_hours)
         df[f"tide_cos_{name}"] = np.cos(omega * t_hours)
+    return df
+
+
+def add_temporal_covariates(
+    df: pd.DataFrame,
+    timestamp_col: str = "timestamp",
+) -> pd.DataFrame:
+    """Add hour-of-day and lunar-phase sin/cos features.
+
+    Adapted from hour_of_day() and lunar_phase() helpers in
+    dcablayan/tideformer prototypes.py.
+    """
+    df = df.copy()
+    t_hours = _hours_since_epoch(df[timestamp_col])
+    hod = (t_hours % 24.0) / 24.0
+    df["hour_sin"] = np.sin(2 * np.pi * hod)
+    df["hour_cos"] = np.cos(2 * np.pi * hod)
+    lp = (t_hours % _LUNAR_SYNODIC_HOURS) / _LUNAR_SYNODIC_HOURS
+    df["lunar_sin"] = np.sin(2 * np.pi * lp)
+    df["lunar_cos"] = np.cos(2 * np.pi * lp)
     return df
 
 
@@ -81,11 +109,13 @@ def build_feature_matrix(
 ) -> Tuple[pd.DataFrame, pd.Series]:
     """Build (X, y) from a single-station time series.
 
-    Applies tidal harmonics, lag features, and rolling statistics,
+    Applies tidal harmonics (8 constituents), temporal covariates
+    (hour-of-day, lunar phase), lag features, and rolling statistics,
     then drops rows with any NaN from the lag computation.
     """
     df = df.copy().sort_values("timestamp").reset_index(drop=True)
     df = add_tidal_harmonics(df)
+    df = add_temporal_covariates(df)
     df = add_lag_features(df)
     df = add_rolling_features(df)
     df = df.dropna().reset_index(drop=True)

@@ -25,11 +25,10 @@ ENV/
 # Notebooks
 .ipynb_checkpoints/
 
-# Data — commit only demo data
+# Data — commit only demo data; block any private Hohonu files
 data/raw/
 data/interim/
 data/processed/
-# Hohonu private data (never commit)
 data/nodes.json
 data/nodes_standardized.json
 data/hohonu_stations.tsv
@@ -37,6 +36,8 @@ data/*.tsv
 data/*.csv
 !data/demo/*.csv
 !data/demo/README.md
+!data/demo/tidecast/*.csv
+!data/demo/tidecast/README.md
 
 # Reports — ignore large generated runs, commit sample outputs
 reports/*.log
