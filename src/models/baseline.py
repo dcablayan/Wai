@@ -7,10 +7,14 @@ PersistenceModel
     Useful as a floor to beat.
 
 HarmonicRidgeModel
-    Harmonic regression over the five major tidal constituents (M2, S2, K1,
-    O1, N2) plus lagged observations and rolling statistics, fitted with
-    Ridge regression.  Captures the dominant semi-diurnal/diurnal tidal
-    signal and is easy to interpret and extend.
+    Harmonic regression over eight tidal constituents (M2, S2, K1, O1, N2,
+    M4, M6, Mm) plus temporal covariates, lags, and rolling statistics,
+    fitted with Ridge regression.
+
+WaveGRUModel
+    DataFrame adapter wrapping WaveGRUPrototype (dcablayan/tideformer).
+    Bidirectional double-exponential smoothing with attention-like weighting.
+    Operates on raw values; no feature engineering required.
 
 The code is structured so that substituting an LSTM or Transformer encoder
 for the Ridge estimator requires only swapping the estimator inside
@@ -92,3 +96,72 @@ class HarmonicRidgeModel:
         X = X[self._feature_cols]
         pred = self._pipeline.predict(X)
         return compute_metrics(y.values, pred)
+
+
+class WaveGRUModel:
+    """DataFrame adapter for WaveGRUPrototype (dcablayan/tideformer).
+
+    Wraps the pure-Python bidirectional double-exponential smoothing prototype
+    so it fits the same DataFrame API as PersistenceModel and HarmonicRidgeModel.
+
+    This model operates on raw values only — no tidal feature engineering is
+    applied.  It provides a useful complementary baseline: strong for short
+    horizons, interpretable, dependency-free in its core implementation.
+    """
+
+    LOOKBACK = 24  # 24 × 6min = 144 min of context (matches tideformer benchmark)
+
+    def __init__(self, lookback: int = LOOKBACK) -> None:
+        self.lookback = lookback
+        self._proto = None
+
+    def fit(self, df: pd.DataFrame, target_col: str = "water_level") -> "WaveGRUModel":
+        from src.data.windowing import make_windows
+        from src.models.prototypes import WaveGRUPrototype
+
+        series = df.sort_values("timestamp")[target_col].dropna().tolist()
+        windows = make_windows(series, lookback=self.lookback)
+        self._proto = WaveGRUPrototype(lookback=self.lookback)
+        self._proto.fit(windows)
+        self._train_series = series
+        return self
+
+    def predict_on(
+        self,
+        df: pd.DataFrame,
+        target_col: str = "water_level",
+        context_df: Optional[pd.DataFrame] = None,
+    ) -> np.ndarray:
+        """Predict on df, prepending lookback context from context_df if given."""
+        if self._proto is None:
+            raise RuntimeError("Call fit() before predict_on()")
+        from src.data.windowing import make_windows
+
+        context = (
+            context_df.sort_values("timestamp")[target_col].dropna().tolist()[-self.lookback:]
+            if context_df is not None
+            else self._train_series[-self.lookback:]
+        )
+        test_vals = df.sort_values("timestamp")[target_col].dropna().tolist()
+        combined = context + test_vals
+
+        preds = []
+        for i in range(len(context), len(combined)):
+            window = {
+                "values": combined[i - self.lookback: i],
+                "times": list(range(i - self.lookback, i)),
+                "target_time": float(i),
+                "target_value": combined[i],
+            }
+            preds.append(self._proto.predict(window))
+        return np.array(preds)
+
+    def evaluate(
+        self,
+        df: pd.DataFrame,
+        target_col: str = "water_level",
+        context_df: Optional[pd.DataFrame] = None,
+    ) -> dict:
+        pred = self.predict_on(df, target_col, context_df)
+        actual = df.sort_values("timestamp")[target_col].dropna().values[:len(pred)]
+        return compute_metrics(actual, pred)

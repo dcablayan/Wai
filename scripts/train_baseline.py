@@ -3,7 +3,10 @@
 Models evaluated
 ----------------
 1. PersistenceModel   — naive last-value baseline
-2. HarmonicRidgeModel — tidal harmonics + lags + rolling features + Ridge
+2. HarmonicRidgeModel — 8-constituent tidal harmonics + temporal covariates
+                        + lags + rolling features, fitted with Ridge
+3. WaveGRUModel       — bidirectional double-EMA with attention (pure Python,
+                        adapted from dcablayan/tideformer WaveGRUPrototype)
 
 A 75/25 temporal train/test split is used per station to avoid data leakage.
 Metrics (MAE, RMSE, R², NSE, correlation) are saved to reports/model_metrics.json.
@@ -26,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.data.loader import load_demo_data
 from src.data.validation import validate
-from src.models.baseline import HarmonicRidgeModel, PersistenceModel
+from src.models.baseline import HarmonicRidgeModel, PersistenceModel, WaveGRUModel
 from src.models.metrics import compute_metrics, save_metrics
 
 TRAIN_FRAC = 0.75
@@ -34,7 +37,7 @@ METRICS_PATH = Path(__file__).resolve().parent.parent / "reports" / "model_metri
 
 
 def train_station(df_station):
-    """Train and evaluate both models for one station."""
+    """Train and evaluate all three models for one station."""
     df_station = df_station.sort_values("timestamp").reset_index(drop=True)
     n_train = int(len(df_station) * TRAIN_FRAC)
     train = df_station.iloc[:n_train]
@@ -49,9 +52,14 @@ def train_station(df_station):
     harmonic = HarmonicRidgeModel(alpha=1.0).fit(train)
     harmonic_metrics = harmonic.evaluate(test)
 
+    # --- WaveGRU ---
+    wavegru = WaveGRUModel(lookback=24).fit(train)
+    wavegru_metrics = wavegru.evaluate(test, context_df=train)
+
     return {
         "persistence": persist_metrics,
         "harmonic_ridge": harmonic_metrics,
+        "wave_gru": wavegru_metrics,
         "split": {
             "train_obs": int(n_train),
             "test_obs": int(len(test)),
