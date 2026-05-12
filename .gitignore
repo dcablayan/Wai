@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment / secrets
+.env
+.env.local
+*.key
+*.pem
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Data — commit only demo data
+data/raw/
+data/interim/
+data/processed/
+# Hohonu private data (never commit)
+data/nodes.json
+data/nodes_standardized.json
+data/hohonu_stations.tsv
+data/*.tsv
+data/*.csv
+!data/demo/*.csv
+!data/demo/README.md
+
+# Reports — ignore large generated runs, commit sample outputs
+reports/*.log
+reports/run_*
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
