@@ -158,6 +158,98 @@ discussion of what these numbers do and do not mean.
 
 ---
 
+## Implemented Capabilities
+
+Beyond the three original pipeline models, Wai now includes:
+
+### 4. Gradient Boosting Baseline (`GradBoostModel`)
+
+**What it does**: `HistGradientBoostingRegressor` (scikit-learn) over the same
+8-constituent tidal feature matrix as `HarmonicRidgeModel`. Replaces the Ridge
+estimator with a gradient-boosted decision tree ensemble, capturing non-linear
+interactions between tidal constituents, lags, and rolling statistics.
+
+**Why it's useful**: Allows direct comparison of linear vs. non-linear skill
+on an identical feature set. No additional dependencies required.
+
+**Limitations**: Default hyperparameters; not grid-searched. On a periodic
+tidal signal the gain over Ridge is modest. Does not generalise across stations
+without retraining.
+
+---
+
+### 5. Multi-Horizon Evaluation (`scripts/evaluate_horizons.py`)
+
+Evaluates Persistence, HarmonicRidge, and GradBoost at four horizons:
+1 step (6 min), 60 steps (6 h), 120 steps (12 h), 240 steps (24 h).
+
+**Strategy**: direct forecasting — a separate model is trained per horizon
+with the target shifted h steps forward. This avoids look-ahead bias.
+
+**WaveGRU** is only evaluated at horizon 1 because it is a 1-step algorithm.
+
+**Limitations**: Direct forecasting is an optimistic estimate of skill at
+longer horizons (it is trained for exactly that horizon). Lag features at long
+horizons still reference observations prior to the prediction time, so no
+leakage is introduced, but the feature relevance degrades with horizon length.
+
+---
+
+### 6. Conformal Prediction Intervals (`src/models/conformal.py`)
+
+**What it does**: Split-conformal prediction intervals using symmetric
+absolute residuals as nonconformity scores. Given a calibration set, computes
+qhat (the corrected quantile of calibration residuals) and returns
+`[ŷ − qhat, ŷ + qhat]` for any model's predictions.
+
+**Coverage guarantee**: Marginal coverage ≥ (1 − α) in expectation over
+exchangeable calibration and test samples.
+
+**Limitations**: Assumes exchangeability; tidal series are non-stationary, so
+empirical coverage may fall below the nominal level, especially for longer
+forecast horizons. Intervals are symmetric (constant width) and do not adapt
+to local variance.
+
+---
+
+### 7. NOAA Tidal Predictions Loader (`src/data/loader.py`)
+
+`load_noaa_predictions()` fetches NOAA CO-OPS deterministic tidal predictions
+(the `predictions` product) for any gauged station and date range. No API key
+required. Useful as a high-quality tidal signal for additional feature
+construction or direct comparison.
+
+**Limitations**: Predictions are deterministic harmonics — no meteorological
+forcing or surge component.
+
+---
+
+### 8. High-Water Alert Detection (`src/alerts.py`)
+
+Three configurable threshold modes:
+- `'std'` — mean + k × std_dev (configurable k; default 2.0)
+- `'absolute'` — fixed water-level value in series units
+- `'percentile'` — p-th percentile of a reference distribution
+
+Alert events are summarised in `reports/alert_summary.json` and shown in the
+dashboard Alerts tab.
+
+**Limitations**: Static thresholds computed on training data; does not adapt
+to seasonal sea-level variation or long-term trends.
+
+---
+
+### 9. Spatial Interpolation (`src/features/spatial.py`)
+
+Inverse-distance weighting (IDW) across stations with valid lat/lon
+coordinates. Only applicable when two or more stations are available.
+
+**Limitations**: Deterministic method; no uncertainty quantification. Not
+designed for extrapolation beyond the station network. Coastal geometry
+(along-shore vs. cross-shore) is not modelled.
+
+---
+
 ## Honest Limitations
 
 - All pipeline results are from **synthetic data** and cannot be compared to
@@ -165,26 +257,9 @@ discussion of what these numbers do and do not mean.
 - All prototype benchmark results are from **NOAA-derived tidal predictions**
   (smooth, deterministic). Real sensor data would yield substantially higher
   RMSE.
-- No hyperparameter search is performed for pipeline models; Ridge alpha=1.0
-  is a reasonable default but not optimal for every station.
-- Prototype models have no multi-step forecasting capability in the current
-  implementation (horizon=1 only).
-
----
-
-## Next Steps / Roadmap
-
-| Idea | Complexity | Value |
-|------|-----------|-------|
-| Gradient boosting (XGBoost / LightGBM) | Low | Medium — captures non-linear interactions |
-| LSTM encoder | Medium | High — learns long-range tidal patterns automatically |
-| Transformer (Informer / Autoformer) | High | High — state-of-the-art for long-horizon forecasting |
-| Harmonic constituent fitting (t_tide / utide) | Low | High — true tidal analysis, not regression |
-| NOAA tidal predictions as a feature | Low | Medium — free, high-quality tidal signal |
-| Storm-surge covariate (NWS forecast) | Medium | High — critical for flood early warning |
-| Uncertainty quantification (conformal) | Medium | High — actionable for coastal managers |
-| Multi-step evaluation (6h, 12h, 24h horizons) | Low | High — honest skill assessment |
-
-The codebase is structured so that replacing `HarmonicRidgeModel` with any of
-the above requires only changing `src/models/baseline.py` — the data pipeline,
-feature engineering, and reporting layers remain unchanged.
+- No hyperparameter search is performed for pipeline models; defaults are
+  reasonable starting points, not optimised values.
+- Prototype models (WaveGRU, TinyTide, etc.) are 1-step algorithms; they are
+  not evaluated at multi-step horizons in the current implementation.
+- Advanced deep learning (LSTM, Transformer) and meteorological surge modeling
+  are intentionally excluded to keep the repo lightweight and honest.
