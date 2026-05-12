@@ -23,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.data.windowing import load_tidecast_series, make_windows, temporal_split
+from src.models.branding import DISPLAY_BY_KEY
 from src.models.prototypes import (
     HarmonicNetPrototype,
     SurgeNetPrototype,
@@ -67,6 +68,7 @@ def main() -> None:
         return
 
     MODEL_NAMES = ["TinyTide", "HarmonicNet", "WaveGRU", "SurgeNet"]
+    DISPLAY_NAMES = [DISPLAY_BY_KEY.get(m, m) for m in MODEL_NAMES]
     per_station: dict[str, dict[str, float]] = {}
     overall: dict[str, list[float]] = {m: [] for m in MODEL_NAMES}
 
@@ -85,6 +87,8 @@ def main() -> None:
         print("No stations produced results.")
         return
 
+    header_cols = " | ".join(f"{d} RMSE" for d in DISPLAY_NAMES)
+    sep_cols = " | ".join("---" for _ in DISPLAY_NAMES)
     lines = [
         "# Wai Benchmark Results",
         "",
@@ -92,8 +96,8 @@ def main() -> None:
         "Evaluated on tidecast tidal-prediction data (NOAA-derived, Hawaiian stations).",
         f"Lookback: {LOOKBACK} steps (144 min at 6-min cadence) · Max windows: {MAX_WINDOWS}",
         "",
-        "| Station | TinyTide RMSE | HarmonicNet RMSE | WaveGRU RMSE | SurgeNet RMSE |",
-        "| --- | --- | --- | --- | --- |",
+        f"| Station | {header_cols} |",
+        f"| --- | {sep_cols} |",
     ]
     for station, scores in per_station.items():
         row = f"| {station} "
@@ -103,10 +107,10 @@ def main() -> None:
         lines.append(row)
 
     lines += ["", "**Averages**", "| Model | Mean RMSE |", "| --- | --- |"]
-    for name in MODEL_NAMES:
+    for name, display in zip(MODEL_NAMES, DISPLAY_NAMES):
         vals = overall[name]
         avg = sum(vals) / len(vals) if vals else float("nan")
-        lines.append(f"| {name} | {avg:.3f} |")
+        lines.append(f"| {display} | {avg:.3f} |")
 
     REPORTS_DIR.mkdir(exist_ok=True)
     out = REPORTS_DIR / "benchmark_results.md"

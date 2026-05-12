@@ -25,9 +25,9 @@ Feature Engineering (src/features/engineering.py)
    │  build_feature_matrix() — composes X, y dropping NaN rows
    ▼
 Forecasting (src/models/baseline.py)
-   │  PersistenceModel       — last-value naive baseline
-   │  HarmonicRidgeModel     — harmonic regression with Ridge regularisation
-   │  WaveGRUModel           — DataFrame adapter for WaveGRUPrototype
+   │  PersistenceModel       — ʻAle Kūpaʻa (Steady Wave): last-value naive baseline
+   │  HarmonicRidgeModel     — Nalu Hoʻokani Ridge (Harmonic Wave Ridge): harmonic regression with Ridge
+   │  WaveGRUModel           — Nalu Holo Adapter (Fast Wave Adapter): DataFrame adapter for WaveGRUPrototype
    │  compute_metrics()      — MAE, RMSE, R², NSE, Pearson correlation
    │  save_metrics()         — writes reports/model_metrics.json
    ▼
@@ -54,11 +54,11 @@ Windowing (src/data/windowing.py)
    │  temporal_split()       — train / val / test split by time order
    ▼
 Prototype Benchmarks (src/models/prototypes.py)
-   │  TinyTidePrototype       — two-layer MLP-style with skip connection
-   │  HarmonicNetPrototype    — 8-constituent harmonic projection
-   │  WaveGRUPrototype        — bidirectional double-exp smoothing + attention
-   │  SurgeNetPrototype       — dual-head tide + surge residual estimator
-   │  TsunamiSentinelPrototype — multi-scale anomaly detector
+   │  TinyTidePrototype       — ʻAle Iki (Ripple): two-layer MLP-style with skip connection
+   │  HarmonicNetPrototype    — Nalu Hoʻokani (Harmonic Wave): 8-constituent harmonic projection
+   │  WaveGRUPrototype        — Nalu Holo (Fast Wave): bidirectional double-exp smoothing + attention
+   │  SurgeNetPrototype       — ʻAle Piʻi (Rising Wave): dual-head tide + surge residual estimator
+   │  TsunamiSentinelPrototype — Kai Eʻe (Tsunami): multi-scale anomaly detector
    ▼
 Benchmark Script (scripts/run_benchmark.py)
    │  benchmark_station()     — fits + evaluates all models per station
@@ -80,6 +80,7 @@ Wai/
 │   │   └── engineering.py   8-constituent tidal harmonics, temporal covariates, lags, rolling windows
 │   ├── models/
 │   │   ├── baseline.py      PersistenceModel + HarmonicRidgeModel + WaveGRUModel adapter
+│   │   ├── branding.py      Wave model display names (Hawaiian branding, single source of truth)
 │   │   ├── metrics.py       MAE / RMSE / R² / NSE / corr
 │   │   └── prototypes.py    Pure-Python prototype benchmark models
 │   └── reporting/

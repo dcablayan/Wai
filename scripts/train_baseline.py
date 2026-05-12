@@ -32,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.data.loader import load_demo_data
 from src.data.validation import validate
 from src.models.baseline import HarmonicRidgeModel, PersistenceModel, WaveGRUModel
+from src.models.branding import DISPLAY_BY_KEY
 from src.models.gradient_boost import GradBoostModel
 from src.models.metrics import compute_metrics, save_metrics
 
@@ -101,8 +102,9 @@ def main() -> None:
         for model_name, m in results.items():
             if not isinstance(m, dict) or "mae" not in m:
                 continue
+            label = DISPLAY_BY_KEY.get(model_name, model_name)
             print(
-                f"  {model_name:<20} MAE={m['mae']:.4f}  "
+                f"  {label:<42} MAE={m['mae']:.4f}  "
                 f"RMSE={m['rmse']:.4f}  R²={m['r2']:.4f}"
             )
 

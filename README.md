@@ -217,13 +217,13 @@ baselines, not production deep-learning models. They are evaluated on
 NOAA-derived tidecast predictions (smoother signal than raw sensor data; see
 [`docs/metrics_interpretation.md`](docs/metrics_interpretation.md)).
 
-| Model | Description | Mean RMSE (tidecast, ft) |
-|-------|-------------|--------------------------|
-| TinyTide | Two-layer MLP-style with tidal covariates and skip connection | 0.222 |
-| HarmonicNet | Physics-informed 8-constituent harmonic projection | 6.687 |
-| WaveGRU | Bidirectional double-exp smoothing + attention weighting | 0.911 |
-| SurgeNet | Dual-head tide + surge residual estimator | 6.328 |
-| TsunamiSentinel | Multi-scale high-pass anomaly detector | — |
+| Display Name | Description | Mean RMSE (tidecast, ft) |
+|-------------|-------------|--------------------------|
+| ʻAle Iki (Ripple) | Two-layer MLP-style with tidal covariates and skip connection | 0.222 |
+| Nalu Hoʻokani (Harmonic Wave) | Physics-informed 8-constituent harmonic projection | 9.389 |
+| Nalu Holo (Fast Wave) | Bidirectional double-exp smoothing + attention weighting | 0.911 |
+| ʻAle Piʻi (Rising Wave) | Dual-head tide + surge residual estimator | 8.582 |
+| Kai Eʻe (Tsunami) | Multi-scale high-pass anomaly detector | — |
 
 Run the benchmark:
 
@@ -299,6 +299,27 @@ Wai/
 ├── requirements.txt
 └── pyproject.toml
 ```
+
+---
+
+## Wave Model Names
+
+Each model carries a Hawaiian wave name alongside its English label. Internal
+Python class names (e.g. `TinyTidePrototype`, `HarmonicRidgeModel`) remain
+unchanged for code stability. The display names below are used in reports, the
+dashboard, and documentation. The single source of truth is
+`src/models/branding.py`.
+
+| Internal Name | Display Name | English Label | Category | Role |
+|---------------|-------------|---------------|----------|------|
+| TinyTidePrototype | ʻAle Iki (Ripple) | Ripple | Prototype | Smallest/simple benchmark or sanity-check model |
+| HarmonicNetPrototype | Nalu Hoʻokani (Harmonic Wave) | Harmonic Wave | Prototype | Harmonic/periodic tide model using tidal rhythm |
+| WaveGRUPrototype | Nalu Holo (Fast Wave) | Fast Wave | Prototype | Sequential smoothing/time-series movement model |
+| SurgeNetPrototype | ʻAle Piʻi (Rising Wave) | Rising Wave | Prototype | Surge/high-water residual model |
+| TsunamiSentinelPrototype | Kai Eʻe (Tsunami) | Tsunami | Prototype | Strongest anomaly/sentinel model — tsunami and rapid-spike detection |
+| PersistenceModel | ʻAle Kūpaʻa (Steady Wave) | Steady Wave | Pipeline | Naive last-value baseline and stability floor |
+| HarmonicRidgeModel | Nalu Hoʻokani Ridge (Harmonic Wave Ridge) | Harmonic Wave Ridge | Pipeline | Ridge regression over harmonic tide features |
+| WaveGRUModel | Nalu Holo Adapter (Fast Wave Adapter) | Fast Wave Adapter | Pipeline | DataFrame adapter around WaveGRUPrototype |
 
 ---
 

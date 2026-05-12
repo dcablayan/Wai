@@ -56,13 +56,16 @@ A tidecast RMSE of 0.222 ft ≈ 0.068 m.
 
 `reports/benchmark_results.md` shows that:
 
-1. **TinyTide** (mean RMSE 0.222 ft) is the strongest prototype on
-   smooth tidal predictions, outperforming naive persistence on a clean signal.
-2. **WaveGRU** (mean RMSE 0.911 ft) is a useful complementary baseline
-   using only smoothing — no harmonic knowledge required.
-3. **HarmonicNet** and **SurgeNet** (mean RMSE ~6–7 ft) underperform on
-   tidecast data because their harmonic fitting converges slowly on short
-   windows and their residual heads add noise.
+1. **ʻAle Iki (Ripple)** (`TinyTidePrototype`, mean RMSE 0.222 ft) is the
+   strongest prototype on smooth tidal predictions, outperforming naive
+   persistence on a clean signal.
+2. **Nalu Holo (Fast Wave)** (`WaveGRUPrototype`, mean RMSE 0.911 ft) is a
+   useful complementary baseline using only smoothing — no harmonic knowledge
+   required.
+3. **Nalu Hoʻokani (Harmonic Wave)** and **ʻAle Piʻi (Rising Wave)**
+   (`HarmonicNetPrototype` / `SurgeNetPrototype`, mean RMSE ~9 / ~8.5 ft)
+   underperform on tidecast data because their harmonic fitting converges
+   slowly on short windows and their residual heads add noise.
 
 These results **validate that the prototype implementations are functional and
 produce differentiated behaviour**. They do **not** claim operational readiness

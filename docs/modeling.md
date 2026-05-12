@@ -19,7 +19,7 @@ The goal is to forecast water level at a coastal station for the next N steps
 These models share the same DataFrame API and are evaluated against synthetic
 demo data on a temporal hold-out (last 25% per station).
 
-### 1. Persistence Baseline (`PersistenceModel`)
+### 1. ʻAle Kūpaʻa (Steady Wave) — `PersistenceModel`
 
 **What it does**: predicts the last observed water level for every future step.
 
@@ -30,7 +30,7 @@ very short horizons (< 1 hour). If any model cannot beat it, it is not useful.
 
 ---
 
-### 2. Harmonic Ridge (`HarmonicRidgeModel`)
+### 2. Nalu Hoʻokani Ridge (Harmonic Wave Ridge) — `HarmonicRidgeModel`
 
 **What it does**: Fits a Ridge-regularised linear regression over:
 
@@ -61,7 +61,7 @@ Ridge shrinks noisy feature coefficients.
 
 ---
 
-### 3. WaveGRU Adapter (`WaveGRUModel`)
+### 3. Nalu Holo Adapter (Fast Wave Adapter) — `WaveGRUModel`
 
 **What it does**: Wraps `WaveGRUPrototype` (from `src/models/prototypes.py`) in
 the standard DataFrame API. Internally uses bidirectional double-exponential
@@ -94,28 +94,34 @@ They are evaluated on NOAA-derived tidecast predictions (smooth, deterministic
 signal) — see [`docs/metrics_interpretation.md`](metrics_interpretation.md)
 for why this matters.
 
-### TinyTidePrototype
+> **Naming note**: Each prototype carries a Hawaiian wave display name
+> (e.g. `ʻAle Iki (Ripple)`) used in reports and the dashboard. Internal Python
+> class names (`TinyTidePrototype`, `HarmonicNetPrototype`, etc.) remain
+> unchanged for import stability. The full mapping is in
+> `src/models/branding.py`.
+
+### ʻAle Iki (Ripple) — `TinyTidePrototype`
 
 Two-layer MLP-style forecaster with hour-of-day and lunar-phase covariates
 plus a direct skip connection from the last observation. Trains via lightweight
 gradient descent (no autograd). **Best performer** on tidecast data (mean RMSE
 0.222 ft).
 
-### HarmonicNetPrototype
+### Nalu Hoʻokani (Harmonic Wave) — `HarmonicNetPrototype`
 
 Physics-informed projection over 8 tidal constituents (M2, S2, K1, O1, Mm,
 MSf, M4, M6) using least-squares amplitude fitting on the training windows,
 plus a causal residual smoothing head. Underperforms on short windows because
 the long-period constituents (Mm, MSf) need months of data to fit reliably.
 
-### WaveGRUPrototype
+### Nalu Holo (Fast Wave) — `WaveGRUPrototype`
 
 Bidirectional double-exponential smoothing with attention-like weighting.
 Alpha/beta selected via a 4-candidate grid search on training windows.
 Second-best performer on tidecast (mean RMSE 0.911 ft). This is the algorithm
 wrapped by `WaveGRUModel` in the pipeline tier.
 
-### SurgeNetPrototype
+### ʻAle Piʻi (Rising Wave) — `SurgeNetPrototype`
 
 Dual-head model: `HarmonicNetPrototype` as the tide head, plus a surge
 magnitude estimated from the harmonic residual. Accepts optional
@@ -123,7 +129,7 @@ magnitude estimated from the harmonic residual. Accepts optional
 `(prediction, surge_magnitude)`. Currently underperforms because the surge
 head amplifies harmonic fitting error.
 
-### TsunamiSentinelPrototype
+### Kai Eʻe (Tsunami) — `TsunamiSentinelPrototype`
 
 High-pass multi-scale anomaly detector. Computes residual energy relative to
 a local rolling baseline across multiple scales and flags windows exceeding a
