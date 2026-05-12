@@ -280,12 +280,13 @@ with tab_comparison:
     station_metrics = all_metrics.get(station_id, {})
 
     if station_metrics:
+        from src.models.branding import DISPLAY_BY_KEY
         rows = []
         for model_name, m in station_metrics.items():
             if not isinstance(m, dict) or "mae" not in m:
                 continue
             rows.append({
-                "Model": model_name,
+                "Model": DISPLAY_BY_KEY.get(model_name, model_name),
                 "MAE (m)": f"{m.get('mae', float('nan')):.4f}",
                 "RMSE (m)": f"{m.get('rmse', float('nan')):.4f}",
                 "R²": f"{m.get('r2', float('nan')):.4f}",

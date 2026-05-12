@@ -76,4 +76,4 @@ def test_benchmark_writes_report_file(tmp_path, monkeypatch):
     assert out.exists(), "benchmark_results.md was not created"
     content = out.read_text()
     assert "station-a_tidecast" in content
-    assert "TinyTide" in content
+    assert "ʻAle Iki" in content
