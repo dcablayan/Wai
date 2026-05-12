@@ -64,34 +64,42 @@ present anywhere in this repository.
 
 ---
 
-## Features
+## Implemented Capabilities
 
-| Feature | Details |
-|---------|---------|
+| Capability | Details |
+|-----------|---------|
 | Demo data loader | Reproducible synthetic dataset (2 stations, 90 days, 6-min cadence) |
-| NOAA CO-OPS loader | Live ingestion from the public API (no key required) |
+| NOAA CO-OPS loader | Live ingestion of observations and tidal predictions (no API key required) |
 | Tidecast reference data | NOAA-derived tidal predictions for 10 coastal stations (Hawaii) |
 | Data validation | NaN, gap, duplicate, out-of-range, and timezone checks |
 | Tidal feature engineering | 8-constituent sin/cos (M2/S2/K1/O1/N2/M4/M6/Mm) + temporal covariates + lags + rolling windows |
 | Windowing utilities | Sliding-window builder and temporal train/val/test splits for prototype models |
 | Persistence baseline | Last-value naive baseline |
 | Harmonic Ridge model | Ridge-regularised linear regression over 8 tidal constituents + temporal covariates |
-| WaveGRU adapter | DataFrame API wrapper for WaveGRUPrototype (bidirectional smoothing, no feature engineering required) |
+| Gradient boosting baseline | HistGradientBoostingRegressor over the same feature matrix (non-linear baseline, scikit-learn only) |
+| WaveGRU adapter | DataFrame API wrapper for WaveGRUPrototype (bidirectional smoothing) |
 | Prototype benchmark models | TinyTide, HarmonicNet, WaveGRU, SurgeNet, TsunamiSentinel — pure-Python research prototypes |
+| Multi-horizon evaluation | Direct forecasting at 1 step (6 min), 6 h, 12 h, 24 h horizons |
+| Conformal uncertainty intervals | Split-conformal prediction intervals (distribution-free, 90% nominal coverage) |
+| High-water alert detection | Configurable thresholds: mean + k·std, absolute value, or percentile |
+| Spatial interpolation | Inverse-distance weighting across stations with lat/lon coordinates |
 | Metrics | MAE, RMSE, R², NSE, Pearson correlation |
-| Streamlit dashboard | Time series, forecast overlay, anomaly markers, station map |
-| HTML report generation | Per-station report with stats, metrics, anomaly table |
-| Benchmark reports | Prototype model RMSE across tidecast stations (`reports/benchmark_results.md`) |
+| Streamlit dashboard | Tabbed UI: Overview · Forecasts · Model Comparison · Alerts · Uncertainty · Benchmark |
+| HTML report generation | Per-station report with stats, metrics, anomaly table, alert summary |
+| Benchmark reports | Prototype model RMSE across tidecast stations |
 | CI pipeline | GitHub Actions tests on Python 3.10 + 3.11 |
+
+Advanced deep learning (LSTM, Transformer) and meteorological surge modeling (NWS/GFS covariates)
+are intentionally excluded to keep the repo lightweight, dependency-free, and honest about scope.
 
 ---
 
 ## Tech Stack
 
-- **Python 3.10+** · numpy · pandas · scikit-learn · statsmodels
+- **Python 3.10+** · numpy · pandas · scikit-learn
 - **Streamlit** · Plotly — interactive dashboard
 - **NOAA CO-OPS API** — public, no key required
-- **pytest** — test suite
+- **pytest** — test suite (110 tests)
 - **GitHub Actions** — CI
 
 ---
@@ -105,25 +113,28 @@ cd Wai
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# 2. Generate the synthetic demo dataset
-python -m scripts.prepare_demo_data
+# 2. Run the full demo pipeline (data → train → report → benchmark)
+make demo
 
-# 3. Train baseline models and save metrics
-python -m scripts.train_baseline
+# 3. Evaluate multi-horizon forecast skill
+python -m scripts.evaluate_horizons
 
-# 4. Run prototype benchmarks on tidecast data
-python -m scripts.run_benchmark
+# 4. Run the test suite
+make test
 
-# 5. Generate HTML station reports
-python -m scripts.generate_report
-
-# 6. Launch the interactive dashboard
-streamlit run app.py
+# 5. Launch the interactive dashboard
+make dashboard
 ```
 
 Open `http://localhost:8501` to explore the dashboard.
 
-Or use `make` for convenience — see the [Makefile](Makefile).
+Or run individual steps:
+```bash
+python -m scripts.prepare_demo_data   # synthetic demo data
+python -m scripts.train_baseline      # train + evaluate all models
+python -m scripts.run_benchmark       # benchmark prototypes on tidecast data
+python -m scripts.generate_report     # HTML station reports
+```
 
 ---
 
@@ -231,15 +242,11 @@ guidance on interpreting these numbers honestly.
 
 After running the quickstart commands:
 
-- `reports/model_metrics.json` — MAE/RMSE/R² for each pipeline model and station (synthetic data)
+- `reports/model_metrics.json` — MAE/RMSE/R² for all four pipeline models per station
+- `reports/horizon_metrics.json` / `.md` — multi-horizon evaluation at 1-step, 6h, 12h, 24h
 - `reports/benchmark_results.md` — RMSE table for prototype models across tidecast stations
 - `reports/report_DEMO-HNL.html` — interactive HTML report for Honolulu station
 - `reports/report_DEMO-SFO.html` — interactive HTML report for SF station
-
-To add screenshots to this README:
-1. Take a screenshot of the dashboard or a report
-2. Save to `docs/images/`
-3. Reference with `![Dashboard](docs/images/dashboard.png)`
 
 ---
 
@@ -249,32 +256,38 @@ To add screenshots to this README:
 Wai/
 ├── src/
 │   ├── data/
-│   │   ├── loader.py          Demo + NOAA CO-OPS data loaders
+│   │   ├── loader.py          Demo + NOAA CO-OPS loaders (observations + predictions)
 │   │   ├── validation.py      Schema and quality validation
 │   │   └── windowing.py       Sliding-window builder + tidecast CSV loader
 │   ├── features/
-│   │   └── engineering.py     8-constituent tidal harmonics, temporal covariates, lags, rolling windows
+│   │   ├── engineering.py     8-constituent tidal harmonics, temporal covariates, lags, rolling windows
+│   │   └── spatial.py         Inverse-distance weighting across stations with lat/lon
 │   ├── models/
 │   │   ├── baseline.py        PersistenceModel + HarmonicRidgeModel + WaveGRUModel adapter
+│   │   ├── gradient_boost.py  GradBoostModel (HistGradientBoostingRegressor)
+│   │   ├── conformal.py       Split-conformal prediction intervals
 │   │   ├── metrics.py         MAE / RMSE / R² / NSE / Pearson corr
 │   │   └── prototypes.py      TinyTide, HarmonicNet, WaveGRU, SurgeNet, TsunamiSentinel (pure-Python)
+│   ├── alerts.py              High-water alert detection (std / absolute / percentile thresholds)
 │   └── reporting/
 │       └── report.py          HTML report generation
 ├── scripts/
 │   ├── prepare_demo_data.py   Generate synthetic demo CSV
-│   ├── train_baseline.py      Train pipeline models, save metrics JSON
+│   ├── train_baseline.py      Train all four pipeline models, save metrics JSON
+│   ├── evaluate_horizons.py   Multi-horizon evaluation (1-step, 6h, 12h, 24h)
 │   ├── generate_report.py     Build HTML reports from data + metrics
 │   └── run_benchmark.py       Benchmark prototype models on tidecast data
-├── app.py                     Streamlit dashboard entry point
+├── app.py                     Streamlit dashboard (tabbed: Overview / Forecasts / Comparison / Alerts / Uncertainty / Benchmark)
 ├── data/demo/
 │   ├── demo_water_levels.csv  Synthetic water-level data (safe to commit)
 │   ├── README.md              Data provenance notes
 │   └── tidecast/              NOAA-derived tidal predictions for 10 station locations
 ├── reports/
 │   ├── model_metrics.json     Pipeline model metrics (synthetic data)
+│   ├── horizon_metrics.json   Multi-horizon evaluation results
 │   ├── benchmark_results.md   Prototype model RMSE table (tidecast data)
 │   └── report_*.html          Per-station HTML reports
-├── tests/                     pytest test suite
+├── tests/                     pytest test suite (110 tests)
 ├── docs/
 │   ├── architecture.md        Pipeline diagram and design decisions
 │   ├── modeling.md            Model details, features, limitations
@@ -289,49 +302,43 @@ Wai/
 
 ---
 
-## Limitations
+## Known Limitations
 
-- Demo pipeline results are on **synthetic data** and cannot be compared to
+- All pipeline results are on **synthetic data** and cannot be compared to
   published operational benchmarks.
 - Tidecast benchmark metrics are on **NOAA-derived tidal predictions** (smooth,
   deterministic signal) — results will be substantially better than real-world
   performance on noisy sensor data.
 - Prototype models are research baselines implemented in pure Python (stdlib
   math only); they are not production neural networks despite their names.
-- The harmonic model does not incorporate meteorological forcing (wind,
-  pressure), so it cannot predict storm surge from first principles.
+- No meteorological forcing (wind, pressure) is incorporated; storm surge
+  cannot be predicted from first principles.
 - NOAA API requests are limited to 31-day windows per call; longer time series
   require multiple requests.
-- No hyperparameter tuning is performed; Ridge alpha=1.0 is a reasonable
-  default, not an optimised one.
+- No hyperparameter tuning is performed; default parameters are reasonable
+  starting points, not optimised values.
+- Conformal intervals assume exchangeability; tidal series are non-stationary,
+  so empirical coverage may fall below the nominal level.
+- IDW spatial interpolation is a simple deterministic method with no
+  uncertainty quantification.
+- Advanced deep learning (LSTM, Transformer) and meteorological surge modeling
+  (NWS/GFS covariates) are intentionally excluded to keep the repo lightweight
+  and honest about scope.
 
 See [`docs/metrics_interpretation.md`](docs/metrics_interpretation.md) for
 a full discussion of how to interpret reported numbers.
 
 ---
 
-## Future Roadmap
-
-- [ ] Gradient boosting (XGBoost / LightGBM) — non-linear baseline
-- [ ] LSTM encoder for multi-step-ahead forecasting
-- [ ] Informer / Autoformer Transformer architecture
-- [ ] Proper harmonic constituent fitting using `utide`
-- [ ] Storm-surge covariate from NWS forecast API
-- [ ] Uncertainty quantification via conformal prediction
-- [ ] Multi-station spatial interpolation
-- [ ] Real-time alerting for high-water thresholds
-
----
-
 ## Resume Bullet
 
-> Built **Wai**, a reproducible coastal water-level forecasting pipeline in
-> Python; implemented 8-constituent tidal harmonic feature engineering over
-> NOAA CO-OPS data, trained Ridge and persistence baseline models (reporting
-> MAE/RMSE/R² on held-out test sets), benchmarked five pure-Python prototype
-> models against NOAA-derived tidal predictions, and shipped an interactive
-> Streamlit dashboard with anomaly detection, station maps, and automated HTML
-> reports — all with a CI-tested synthetic demo dataset and zero private data
+> Built **Wai**, a reproducible coastal water-level forecasting pipeline;
+> implemented 8-constituent tidal harmonic feature engineering over NOAA
+> CO-OPS data, trained four models (Persistence, HarmonicRidge, GradBoost,
+> WaveGRU) with multi-horizon evaluation (6 min–24 h), added split-conformal
+> prediction intervals, high-water alert detection, and inverse-distance
+> spatial interpolation — all backed by 110 passing tests, an interactive
+> Streamlit dashboard, automated HTML reports, and CI, with zero private data
 > exposure.
 
 ---

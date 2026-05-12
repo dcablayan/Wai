@@ -47,6 +47,63 @@ def load_demo_data(path: Optional[Path] = None) -> pd.DataFrame:
     return df.sort_values("timestamp").reset_index(drop=True)
 
 
+NOAA_API_URL = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter"
+
+
+def _noaa_api_params(
+    station_id: str,
+    begin_date: str,
+    end_date: str,
+    product: str,
+    datum: str,
+    units: str,
+    time_zone: str,
+) -> dict:
+    """Return the NOAA CO-OPS API parameter dict (no network call)."""
+    return {
+        "station": station_id,
+        "product": product,
+        "begin_date": begin_date,
+        "end_date": end_date,
+        "datum": datum,
+        "units": units,
+        "time_zone": time_zone,
+        "application": "wai_portfolio",
+        "format": "json",
+    }
+
+
+def _parse_noaa_response(
+    payload: dict,
+    station_id: str,
+    datum: str,
+    units: str,
+    source_label: str = "NOAA_COOPS",
+) -> pd.DataFrame:
+    """Parse a NOAA CO-OPS JSON payload into a Wai-schema DataFrame."""
+    if "error" in payload:
+        raise ValueError(f"NOAA API error: {payload['error']['message']}")
+
+    records = payload.get("data", [])
+    if not records:
+        raise ValueError(f"NOAA API returned no data for station {station_id}")
+
+    df = pd.DataFrame(records)
+    df = df.rename(columns={"t": "timestamp", "v": "water_level"})
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+    df["water_level"] = pd.to_numeric(df["water_level"], errors="coerce")
+    df["station_id"] = str(station_id)
+    df["datum"] = datum
+    df["units"] = "m" if units == "metric" else "ft"
+    df["source"] = source_label
+
+    meta = payload.get("metadata", {})
+    df["lat"] = float(meta.get("lat", float("nan")))
+    df["lon"] = float(meta.get("lon", float("nan")))
+
+    return df[REQUIRED_COLUMNS]
+
+
 def load_noaa_data(
     station_id: str,
     begin_date: str,
@@ -56,7 +113,7 @@ def load_noaa_data(
     units: str = "metric",
     time_zone: str = "gmt",
 ) -> pd.DataFrame:
-    """Fetch water-level data from the NOAA CO-OPS public API.
+    """Fetch water-level observations from the NOAA CO-OPS public API.
 
     Parameters
     ----------
@@ -84,40 +141,72 @@ def load_noaa_data(
     -------
     >>> df = load_noaa_data("9414290", "20240101", "20240131")
     """
-    url = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter"
-    params = {
-        "station": station_id,
-        "product": product,
-        "begin_date": begin_date,
-        "end_date": end_date,
-        "datum": datum,
-        "units": units,
-        "time_zone": time_zone,
-        "application": "wai_portfolio",
-        "format": "json",
-    }
-    resp = requests.get(url, params=params, timeout=30)
+    params = _noaa_api_params(
+        station_id, begin_date, end_date, product, datum, units, time_zone
+    )
+    resp = requests.get(NOAA_API_URL, params=params, timeout=30)
     resp.raise_for_status()
-    payload = resp.json()
+    return _parse_noaa_response(resp.json(), station_id, datum, units)
 
-    if "error" in payload:
-        raise ValueError(f"NOAA API error: {payload['error']['message']}")
 
-    records = payload.get("data", [])
-    if not records:
-        raise ValueError(f"NOAA API returned no data for station {station_id}")
+def load_noaa_predictions(
+    station_id: str,
+    begin_date: str,
+    end_date: str,
+    datum: str = "MLLW",
+    units: str = "metric",
+    time_zone: str = "gmt",
+) -> pd.DataFrame:
+    """Fetch NOAA CO-OPS tidal predictions for a station and date range.
 
-    df = pd.DataFrame(records)
-    df = df.rename(columns={"t": "timestamp", "v": "water_level"})
-    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
-    df["water_level"] = pd.to_numeric(df["water_level"], errors="coerce")
-    df["station_id"] = str(station_id)
-    df["datum"] = datum
-    df["units"] = "m" if units == "metric" else "ft"
-    df["source"] = "NOAA_COOPS"
+    Tidal predictions are deterministic harmonics computed from NOAA's
+    constituent database. They do not include surge or meteorological effects
+    and are available for all gauged stations without an API key.
 
-    meta = payload.get("metadata", {})
-    df["lat"] = float(meta.get("lat", float("nan")))
-    df["lon"] = float(meta.get("lon", float("nan")))
+    Useful as a high-quality tidal signal baseline or additional feature.
 
-    return df[REQUIRED_COLUMNS]
+    Parameters
+    ----------
+    station_id : str
+        NOAA CO-OPS station ID (e.g. '9414290' for San Francisco).
+    begin_date : str
+        Start date in 'YYYYMMDD' format.
+    end_date : str
+        End date in 'YYYYMMDD' format (max 31-day window per request).
+    datum : str
+        Tidal datum — MLLW, NAVD, MSL, MHHW, etc.
+    units : str
+        'metric' (meters) or 'english' (feet).
+    time_zone : str
+        'gmt', 'lst', or 'lst_ldt'.
+
+    Returns
+    -------
+    pd.DataFrame conforming to the Wai schema with source='NOAA_PREDICTIONS'.
+
+    Example
+    -------
+    >>> preds = load_noaa_predictions("9414290", "20240101", "20240131")
+
+    How to use as a feature
+    -----------------------
+    Merge the predictions DataFrame onto your observations by timestamp,
+    then include the 'water_level' column from predictions as a feature:
+
+        obs = load_noaa_data("9414290", "20240101", "20240131")
+        prd = load_noaa_predictions("9414290", "20240101", "20240131")
+        merged = obs.merge(
+            prd[["timestamp", "water_level"]].rename(
+                columns={"water_level": "noaa_prediction"}
+            ),
+            on="timestamp", how="left",
+        )
+    """
+    params = _noaa_api_params(
+        station_id, begin_date, end_date, "predictions", datum, units, time_zone
+    )
+    resp = requests.get(NOAA_API_URL, params=params, timeout=30)
+    resp.raise_for_status()
+    return _parse_noaa_response(
+        resp.json(), station_id, datum, units, source_label="NOAA_PREDICTIONS"
+    )
