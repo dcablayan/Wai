@@ -173,8 +173,6 @@ if show_forecast:
             x=test["timestamp"], y=test["water_level"],
             name="Actual", line=dict(color="#1f77b4", width=1.5),
         ))
-        from src.features.engineering import build_feature_matrix
-        X_test, _ = build_feature_matrix(test)
         aligned_test = test.iloc[-len(harmonic_pred):]
         fig2.add_trace(go.Scatter(
             x=aligned_test["timestamp"], y=harmonic_pred,
@@ -193,7 +191,7 @@ if show_forecast:
         st.line_chart(test.set_index("timestamp")["water_level"])
 
 # ── Metrics table ─────────────────────────────────────────────────────────────
-st.subheader("Model Performance Metrics")
+st.subheader("Model Performance Metrics (synthetic demo data)")
 all_metrics = load_metrics()
 station_metrics = all_metrics.get(station_id, {})
 
