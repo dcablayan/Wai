@@ -57,7 +57,21 @@ def _tidal_signal(
     amplitudes: dict,
     rng: np.random.Generator,
 ) -> np.ndarray:
-    """Compose a synthetic tidal water-level signal."""
+    """Compose a synthetic tidal water-level signal.
+
+    Event layout
+    ------------
+    For a 90-day series with a 75/25 train/test split the train cutoff sits
+    near day 67.5. Events are placed in BOTH spans so that holdout evaluation
+    can hit unseen extremes:
+
+      * Train-period events  (kept for backwards compatibility):
+          - storm surge around day 20 (4 h half-width, 0.45 m peak)
+          - king-tide pulse around day 10 (2 h half-width, 0.25 m peak)
+      * Test-period events (added so episode metrics have signal to work with):
+          - storm surge around day 80 (4 h half-width, 0.50 m peak)
+          - king-tide pulse around day 85 (2 h half-width, 0.30 m peak)
+    """
     signal = np.zeros(len(t_hours))
     for name, amp in amplitudes.items():
         period = CONSTITUENT_PERIODS[name]
@@ -67,13 +81,22 @@ def _tidal_signal(
     # Gaussian measurement noise (~2 cm std dev)
     signal += rng.normal(0, 0.02, len(t_hours))
 
-    # Storm-surge event around day 20 (4-hour half-width)
+    # Train-period storm-surge event around day 20 (4-hour half-width)
     surge_center = 20 * 24.0
     signal += 0.45 * np.exp(-((t_hours - surge_center) ** 2) / (2 * 4.0**2))
 
-    # King-tide pulse around day 10 (2-hour half-width)
+    # Train-period king-tide pulse around day 10 (2-hour half-width)
     kt_center = 10 * 24.0
     signal += 0.25 * np.exp(-((t_hours - kt_center) ** 2) / (2 * 2.0**2))
+
+    # Test-period storm surge (day 80) — slightly larger so it stands above
+    # the climatology threshold computed on the train window.
+    test_surge_center = 80 * 24.0
+    signal += 0.50 * np.exp(-((t_hours - test_surge_center) ** 2) / (2 * 4.0**2))
+
+    # Test-period king tide (day 85) — narrower pulse, used for peak-time error.
+    test_kt_center = 85 * 24.0
+    signal += 0.30 * np.exp(-((t_hours - test_kt_center) ** 2) / (2 * 2.0**2))
 
     return signal
 

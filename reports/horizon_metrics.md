@@ -6,45 +6,49 @@ WaveGRU is a 1-step model and is only evaluated at horizon 1 (6 min).
 
 ## Station: DEMO-HNL
 
-| Horizon | Model | MAE (m) | RMSE (m) | R² |
-|---------|-------|---------|----------|----|
-| 1step_6min | persistence | 0.0233 | 0.0293 | 0.9830 |
-| 1step_6min | harmonic_ridge | 0.0170 | 0.0212 | 0.9911 |
-| 1step_6min | grad_boost | 0.0195 | 0.0244 | 0.9883 |
-| 1step_6min | wave_gru | 0.0776 | 0.0974 | 0.8124 |
-| 6h | persistence | 0.2784 | 0.3598 | -1.5882 |
-| 6h | harmonic_ridge | 0.0184 | 0.0230 | 0.9894 |
-| 6h | grad_boost | 0.0338 | 0.0451 | 0.9593 |
-| 6h | wave_gru | — | — | WaveGRU is a 1-step model; not evaluated at this horizon. |
-| 12h | persistence | 0.2965 | 0.3680 | -1.7624 |
-| 12h | harmonic_ridge | 0.0182 | 0.0228 | 0.9894 |
-| 12h | grad_boost | 0.0334 | 0.0454 | 0.9579 |
-| 12h | wave_gru | — | — | WaveGRU is a 1-step model; not evaluated at this horizon. |
-| 24h | persistence | 0.0681 | 0.0833 | 0.8582 |
-| 24h | harmonic_ridge | 0.0178 | 0.0223 | 0.9898 |
-| 24h | grad_boost | 0.0210 | 0.0268 | 0.9854 |
-| 24h | wave_gru | — | — | WaveGRU is a 1-step model; not evaluated at this horizon. |
+_train cutoff: 2024-03-08 12:00:00+00:00 (n_train=16200, n_total=21600)._
+
+| Horizon | Model | MAE (m) | RMSE (m) | R² | n_train | n_test |
+|---------|-------|---------|----------|----|---------|--------|
+| 1step_6min | persistence | 0.0234 | 0.0294 | 0.9847 | 16159 | 5399 |
+| 1step_6min | harmonic_ridge | 0.0179 | 0.0229 | 0.9908 | 16159 | 5399 |
+| 1step_6min | grad_boost | 0.0231 | 0.0412 | 0.9699 | 16159 | 5399 |
+| 1step_6min | wave_gru | 0.0795 | 0.1004 | 0.8214 | 16159 | 5399 |
+| 6h | persistence | 0.2876 | 0.3723 | -1.4801 | 16100 | 5340 |
+| 6h | harmonic_ridge | 0.0282 | 0.0569 | 0.9422 | 16100 | 5340 |
+| 6h | grad_boost | 0.0457 | 0.0808 | 0.8831 | 16100 | 5340 |
+| 6h | wave_gru | — | — | WaveGRU is a 1-step model; not evaluated at this horizon. | 16100 | 5340 |
+| 12h | persistence | 0.3064 | 0.3862 | -1.7178 | 16040 | 5280 |
+| 12h | harmonic_ridge | 0.0297 | 0.0664 | 0.9198 | 16040 | 5280 |
+| 12h | grad_boost | 0.0448 | 0.0789 | 0.8865 | 16040 | 5280 |
+| 12h | wave_gru | — | — | WaveGRU is a 1-step model; not evaluated at this horizon. | 16040 | 5280 |
+| 24h | persistence | 0.0871 | 0.1228 | 0.7262 | 15920 | 5160 |
+| 24h | harmonic_ridge | 0.0295 | 0.0668 | 0.9189 | 15920 | 5160 |
+| 24h | grad_boost | 0.0358 | 0.0744 | 0.8996 | 15920 | 5160 |
+| 24h | wave_gru | — | — | WaveGRU is a 1-step model; not evaluated at this horizon. | 15920 | 5160 |
 
 ## Station: DEMO-SFO
 
-| Horizon | Model | MAE (m) | RMSE (m) | R² |
-|---------|-------|---------|----------|----|
-| 1step_6min | persistence | 0.0289 | 0.0360 | 0.9950 |
-| 1step_6min | harmonic_ridge | 0.0168 | 0.0211 | 0.9983 |
-| 1step_6min | grad_boost | 0.0215 | 0.0270 | 0.9972 |
-| 1step_6min | wave_gru | 0.2224 | 0.2593 | 0.7407 |
-| 6h | persistence | 0.7731 | 0.9174 | -2.2654 |
-| 6h | harmonic_ridge | 0.0179 | 0.0224 | 0.9981 |
-| 6h | grad_boost | 0.0486 | 0.0631 | 0.9846 |
-| 6h | wave_gru | — | — | WaveGRU is a 1-step model; not evaluated at this horizon. |
-| 12h | persistence | 0.4896 | 0.6115 | -0.5038 |
-| 12h | harmonic_ridge | 0.0181 | 0.0227 | 0.9979 |
-| 12h | grad_boost | 0.0422 | 0.0534 | 0.9885 |
-| 12h | wave_gru | — | — | WaveGRU is a 1-step model; not evaluated at this horizon. |
-| 24h | persistence | 0.1626 | 0.1923 | 0.8529 |
-| 24h | harmonic_ridge | 0.0186 | 0.0232 | 0.9979 |
-| 24h | grad_boost | 0.0295 | 0.0382 | 0.9942 |
-| 24h | wave_gru | — | — | WaveGRU is a 1-step model; not evaluated at this horizon. |
+_train cutoff: 2024-03-08 12:00:00+00:00 (n_train=16200, n_total=21600)._
+
+| Horizon | Model | MAE (m) | RMSE (m) | R² | n_train | n_test |
+|---------|-------|---------|----------|----|---------|--------|
+| 1step_6min | persistence | 0.0290 | 0.0361 | 0.9952 | 16159 | 5399 |
+| 1step_6min | harmonic_ridge | 0.0179 | 0.0229 | 0.9980 | 16159 | 5399 |
+| 1step_6min | grad_boost | 0.0224 | 0.0297 | 0.9967 | 16159 | 5399 |
+| 1step_6min | wave_gru | 0.2234 | 0.2611 | 0.7460 | 16159 | 5399 |
+| 6h | persistence | 0.7783 | 0.9258 | -2.2128 | 16100 | 5340 |
+| 6h | harmonic_ridge | 0.0277 | 0.0576 | 0.9876 | 16100 | 5340 |
+| 6h | grad_boost | 0.0587 | 0.0919 | 0.9683 | 16100 | 5340 |
+| 6h | wave_gru | — | — | WaveGRU is a 1-step model; not evaluated at this horizon. | 16100 | 5340 |
+| 12h | persistence | 0.5037 | 0.6329 | -0.5523 | 16040 | 5280 |
+| 12h | harmonic_ridge | 0.0297 | 0.0666 | 0.9828 | 16040 | 5280 |
+| 12h | grad_boost | 0.0536 | 0.0843 | 0.9725 | 16040 | 5280 |
+| 12h | wave_gru | — | — | WaveGRU is a 1-step model; not evaluated at this horizon. | 16040 | 5280 |
+| 24h | persistence | 0.1761 | 0.2136 | 0.8251 | 15920 | 5160 |
+| 24h | harmonic_ridge | 0.0304 | 0.0679 | 0.9823 | 15920 | 5160 |
+| 24h | grad_boost | 0.0487 | 0.0902 | 0.9688 | 15920 | 5160 |
+| 24h | wave_gru | — | — | WaveGRU is a 1-step model; not evaluated at this horizon. | 15920 | 5160 |
 
 ## Notes
 
@@ -54,5 +58,9 @@ WaveGRU is a 1-step model and is only evaluated at horizon 1 (6 min).
   an honest skill assessment but may differ from iterated/recursive approaches.
 - Lag features at long horizons (6h, 12h, 24h) reference observations prior
   to the prediction time — no look-ahead bias is introduced.
+- **Boundary exclusion:** the split mask uses `target_idx = X.index + h`
+  for training and `X.index >= n_train` for test. Rows whose target
+  crosses the train/test boundary are dropped from both sets so that no
+  training row sees a test-period label.
 - Advanced deep learning (LSTM, Transformer) is intentionally excluded to
   keep the repo lightweight and honest.

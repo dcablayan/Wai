@@ -43,6 +43,9 @@ jobs:
       - name: Multi-horizon evaluation
         run: python -m scripts.evaluate_horizons
 
+      - name: Event-holdout evaluation (episode metrics)
+        run: python -m scripts.evaluate_events
+
       - name: Prototype benchmark (tidecast data)
         run: python -m scripts.run_benchmark
 
@@ -53,6 +56,9 @@ jobs:
         env:
           NOAA_OFFLINE: "1"
         run: python -m scripts.evaluate_noaa_public
+
+      - name: Build reports/summary.json (single rollup)
+        run: python -m scripts.build_summary
 
       - name: Dashboard import smoke test
         run: python -c "import app; print('app.py imports OK')"

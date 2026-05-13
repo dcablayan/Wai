@@ -167,13 +167,31 @@ def evaluate_sklearn_horizon(
 
 
 def evaluate_station_horizons(df_station: pd.DataFrame) -> dict:
-    """Return horizon metrics for all models and horizons for one station."""
+    """Return horizon metrics for all models and horizons for one station.
+
+    Train/test split (no target leakage)
+    ------------------------------------
+    For direct h-step forecasting the *target* timestamp is at row i+h while the
+    feature row is at i. A clean temporal split therefore must ensure:
+      • training rows have target_idx = i + h strictly below the train cutoff,
+      • test rows have feature index i at or after the train cutoff.
+    Boundary rows whose features fall in the training span but whose targets
+    land in the test span are excluded from both sets — they would otherwise
+    leak test-period labels into training.
+    """
     df_station = df_station.sort_values("timestamp").reset_index(drop=True)
     n = len(df_station)
     n_train = int(n * TRAIN_FRAC)
     series = df_station["water_level"]
 
-    results: dict = {}
+    results: dict = {
+        "_split": {
+            "n_total": int(n),
+            "n_train_rows": int(n_train),
+            "train_cutoff_ts": str(df_station["timestamp"].iloc[n_train])
+            if n_train < n else None,
+        }
+    }
 
     for horizon_name, horizon_steps in HORIZONS.items():
         results[horizon_name] = {}
@@ -191,17 +209,28 @@ def evaluate_station_horizons(df_station: pd.DataFrame) -> dict:
                 results[horizon_name][m] = {"error": str(e)}
             continue
 
-        train_mask = X.index < n_train
+        # target_idx is the position of the prediction target (i + h).
+        # Excluding boundary rows where target crosses into the test span
+        # prevents training rows from seeing test-period labels.
+        target_idx = X.index + horizon_steps
+        train_mask = target_idx < n_train
         test_mask = X.index >= n_train
 
         X_train, y_train = X[train_mask], y_h[train_mask]
         X_test, y_test = X[test_mask], y_h[test_mask]
 
-        # Drop any remaining NaN in y_h (horizon overshoot at end)
+        # Drop any remaining NaN in y_h (defensive — dropna in
+        # build_horizon_features already removes shift overshoot at the end).
         valid_train = y_train.notna()
         valid_test = y_test.notna()
         X_train, y_train = X_train[valid_train], y_train[valid_train]
         X_test, y_test = X_test[valid_test], y_test[valid_test]
+
+        results[horizon_name]["_split_horizon"] = {
+            "n_train_rows": int(len(X_train)),
+            "n_test_rows": int(len(X_test)),
+            "n_excluded_boundary": int(len(X) - len(X_train) - len(X_test)),
+        }
 
         for model_name in ("harmonic_ridge", "grad_boost"):
             results[horizon_name][model_name] = evaluate_sklearn_horizon(
@@ -241,13 +270,28 @@ def format_metrics_md(all_results: dict) -> str:
     for station_id, horizons in all_results.items():
         lines.append(f"## Station: {station_id}")
         lines.append("")
-        lines.append("| Horizon | Model | MAE (m) | RMSE (m) | R² |")
-        lines.append("|---------|-------|---------|----------|----|")
+        split = horizons.get("_split", {}) if isinstance(horizons, dict) else {}
+        if split:
+            lines.append(
+                f"_train cutoff: {split.get('train_cutoff_ts','?')} "
+                f"(n_train={split.get('n_train_rows','?')}, "
+                f"n_total={split.get('n_total','?')})._"
+            )
+            lines.append("")
+        lines.append("| Horizon | Model | MAE (m) | RMSE (m) | R² | n_train | n_test |")
+        lines.append("|---------|-------|---------|----------|----|---------|--------|")
         for horizon_name, models in horizons.items():
+            if horizon_name.startswith("_"):
+                continue
+            sh = models.get("_split_horizon", {}) if isinstance(models, dict) else {}
+            n_tr = sh.get("n_train_rows", "—")
+            n_te = sh.get("n_test_rows", "—")
             for model_name, m in models.items():
+                if model_name.startswith("_"):
+                    continue
                 if not isinstance(m, dict) or "mae" not in m:
                     note = m.get("note", m.get("error", "—")) if isinstance(m, dict) else "—"
-                    lines.append(f"| {horizon_name} | {model_name} | — | — | {note} |")
+                    lines.append(f"| {horizon_name} | {model_name} | — | — | {note} | {n_tr} | {n_te} |")
                     continue
                 mae = m.get("mae")
                 rmse = m.get("rmse")
@@ -255,7 +299,7 @@ def format_metrics_md(all_results: dict) -> str:
                 mae_s = f"{mae:.4f}" if mae is not None and not (isinstance(mae, float) and np.isnan(mae)) else "—"
                 rmse_s = f"{rmse:.4f}" if rmse is not None and not (isinstance(rmse, float) and np.isnan(rmse)) else "—"
                 r2_s = f"{r2:.4f}" if r2 is not None and not (isinstance(r2, float) and np.isnan(r2)) else "—"
-                lines.append(f"| {horizon_name} | {model_name} | {mae_s} | {rmse_s} | {r2_s} |")
+                lines.append(f"| {horizon_name} | {model_name} | {mae_s} | {rmse_s} | {r2_s} | {n_tr} | {n_te} |")
         lines.append("")
 
     lines += [
@@ -267,6 +311,10 @@ def format_metrics_md(all_results: dict) -> str:
         "  an honest skill assessment but may differ from iterated/recursive approaches.",
         "- Lag features at long horizons (6h, 12h, 24h) reference observations prior",
         "  to the prediction time — no look-ahead bias is introduced.",
+        "- **Boundary exclusion:** the split mask uses `target_idx = X.index + h`",
+        "  for training and `X.index >= n_train` for test. Rows whose target",
+        "  crosses the train/test boundary are dropped from both sets so that no",
+        "  training row sees a test-period label.",
         "- Advanced deep learning (LSTM, Transformer) is intentionally excluded to",
         "  keep the repo lightweight and honest.",
         "",
@@ -287,7 +335,11 @@ def main() -> None:
         all_results[station_id] = station_results
 
         for horizon_name, models in station_results.items():
+            if horizon_name.startswith("_"):
+                continue
             for model_name, m in models.items():
+                if model_name.startswith("_"):
+                    continue
                 if isinstance(m, dict) and "mae" in m:
                     mae = m.get("mae")
                     rmse = m.get("rmse")

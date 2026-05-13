@@ -1,0 +1,464 @@
+{
+  "_meta": {
+    "offline_mode": true,
+    "allow_mock": false,
+    "any_mock_used": true,
+    "stations_evaluated": 6
+  },
+  "9414290": {
+    "station": "San Francisco, CA",
+    "holdout_type": "temporal",
+    "data_source": "NOAA_COOPS_MOCK",
+    "mock_used": true,
+    "station_id": "9414290",
+    "begin_date": "20240101",
+    "end_date": "20240128",
+    "n_train": 4860,
+    "n_test": 1621,
+    "train_start": "2024-01-01 00:00:00+00:00",
+    "train_end": "2024-01-21 05:54:00+00:00",
+    "test_start": "2024-01-21 06:00:00+00:00",
+    "test_end": "2024-01-28 00:00:00+00:00",
+    "event_threshold_m": 0.8295,
+    "persistence_rolling": {
+      "mae": 0.05767818346166453,
+      "rmse": 0.07169927872987666,
+      "r2": 0.9708873343546627,
+      "nse": 0.9708873343546627,
+      "corr": 0.9854515287263137
+    },
+    "harmonic_ridge": {
+      "mae": 0.04027619221528322,
+      "rmse": 0.05031618963464354,
+      "r2": 0.9850535764816492,
+      "nse": 0.9850535764816492,
+      "corr": 0.9927851698037531,
+      "mae_block_ci_95": {
+        "lower": 0.038832,
+        "upper": 0.041738,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.038762,
+        0.041719
+      ],
+      "mae_ci_95": [
+        0.038832,
+        0.041738
+      ]
+    },
+    "grad_boost": {
+      "mae": 0.04570988632181825,
+      "rmse": 0.05708809095830745,
+      "r2": 0.9807596559229307,
+      "nse": 0.9807596559229307,
+      "corr": 0.9903615846032191,
+      "mae_block_ci_95": {
+        "lower": 0.043783,
+        "upper": 0.04761,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.044136,
+        0.047361
+      ],
+      "mae_ci_95": [
+        0.043783,
+        0.04761
+      ]
+    },
+    "event_metrics_harmonic_ridge": {
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "peak_error_m": null,
+      "threshold_agree": 1.0
+    }
+  },
+  "1612340": {
+    "station": "Honolulu, HI",
+    "holdout_type": "temporal",
+    "data_source": "NOAA_COOPS_MOCK",
+    "mock_used": true,
+    "station_id": "1612340",
+    "begin_date": "20240101",
+    "end_date": "20240128",
+    "n_train": 4860,
+    "n_test": 1621,
+    "train_start": "2024-01-01 00:00:00+00:00",
+    "train_end": "2024-01-21 05:54:00+00:00",
+    "test_start": "2024-01-21 06:00:00+00:00",
+    "test_end": "2024-01-28 00:00:00+00:00",
+    "event_threshold_m": 0.829,
+    "persistence_rolling": {
+      "mae": 0.05923253355481849,
+      "rmse": 0.07422598059034174,
+      "r2": 0.9689299418483021,
+      "nse": 0.9689299418483021,
+      "corr": 0.9844716647867131
+    },
+    "harmonic_ridge": {
+      "mae": 0.041387089879888025,
+      "rmse": 0.05187864209824502,
+      "r2": 0.9841633029474495,
+      "nse": 0.9841633029474495,
+      "corr": 0.9921265168707646,
+      "mae_block_ci_95": {
+        "lower": 0.039992,
+        "upper": 0.042679,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.039932,
+        0.042861
+      ],
+      "mae_ci_95": [
+        0.039992,
+        0.042679
+      ]
+    },
+    "grad_boost": {
+      "mae": 0.047114915514973356,
+      "rmse": 0.0590710943670852,
+      "r2": 0.9794677075064352,
+      "nse": 0.9794677075064352,
+      "corr": 0.9899957736012053,
+      "mae_block_ci_95": {
+        "lower": 0.04507,
+        "upper": 0.048794,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.045487,
+        0.0489
+      ],
+      "mae_ci_95": [
+        0.04507,
+        0.048794
+      ]
+    },
+    "event_metrics_harmonic_ridge": {
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "peak_error_m": null,
+      "threshold_agree": 1.0
+    }
+  },
+  "8443970": {
+    "station": "Boston, MA",
+    "holdout_type": "temporal",
+    "data_source": "NOAA_COOPS_MOCK",
+    "mock_used": true,
+    "station_id": "8443970",
+    "begin_date": "20240101",
+    "end_date": "20240128",
+    "n_train": 4860,
+    "n_test": 1621,
+    "train_start": "2024-01-01 00:00:00+00:00",
+    "train_end": "2024-01-21 05:54:00+00:00",
+    "test_start": "2024-01-21 06:00:00+00:00",
+    "test_end": "2024-01-28 00:00:00+00:00",
+    "event_threshold_m": 0.8309,
+    "persistence_rolling": {
+      "mae": 0.05820386708568871,
+      "rmse": 0.07330835892456689,
+      "r2": 0.9697844728394712,
+      "nse": 0.9697844728394712,
+      "corr": 0.984899628392921
+    },
+    "harmonic_ridge": {
+      "mae": 0.03989127529799421,
+      "rmse": 0.05016812036636193,
+      "r2": 0.9852332577681533,
+      "nse": 0.9852332577681533,
+      "corr": 0.9926175071380409,
+      "mae_block_ci_95": {
+        "lower": 0.038536,
+        "upper": 0.041217,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.038443,
+        0.04152
+      ],
+      "mae_ci_95": [
+        0.038536,
+        0.041217
+      ]
+    },
+    "grad_boost": {
+      "mae": 0.04534448698562428,
+      "rmse": 0.05697399846925507,
+      "r2": 0.980954936126425,
+      "nse": 0.980954936126425,
+      "corr": 0.9904560354213721,
+      "mae_block_ci_95": {
+        "lower": 0.043658,
+        "upper": 0.046959,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.043646,
+        0.047104
+      ],
+      "mae_ci_95": [
+        0.043658,
+        0.046959
+      ]
+    },
+    "event_metrics_harmonic_ridge": {
+      "precision": null,
+      "recall": 0.0,
+      "f1": null,
+      "peak_error_m": 0.0849,
+      "threshold_agree": 0.9994
+    }
+  },
+  "8723214": {
+    "station": "Virginia Key, FL",
+    "holdout_type": "temporal",
+    "data_source": "NOAA_COOPS_MOCK",
+    "mock_used": true,
+    "station_id": "8723214",
+    "begin_date": "20240101",
+    "end_date": "20240128",
+    "n_train": 4860,
+    "n_test": 1621,
+    "train_start": "2024-01-01 00:00:00+00:00",
+    "train_end": "2024-01-21 05:54:00+00:00",
+    "test_start": "2024-01-21 06:00:00+00:00",
+    "test_end": "2024-01-28 00:00:00+00:00",
+    "event_threshold_m": 0.8293,
+    "persistence_rolling": {
+      "mae": 0.05867684082220992,
+      "rmse": 0.07421439882209718,
+      "r2": 0.9690228436130887,
+      "nse": 0.9690228436130887,
+      "corr": 0.9845177162169715
+    },
+    "harmonic_ridge": {
+      "mae": 0.040475224279735954,
+      "rmse": 0.051074574503706865,
+      "r2": 0.9846756526275189,
+      "nse": 0.9846756526275189,
+      "corr": 0.9923127510061335,
+      "mae_block_ci_95": {
+        "lower": 0.039024,
+        "upper": 0.041961,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.038935,
+        0.041999
+      ],
+      "mae_ci_95": [
+        0.039024,
+        0.041961
+      ]
+    },
+    "grad_boost": {
+      "mae": 0.04716346742839591,
+      "rmse": 0.05907073421976471,
+      "r2": 0.9795017299005548,
+      "nse": 0.9795017299005548,
+      "corr": 0.9897428046027263,
+      "mae_block_ci_95": {
+        "lower": 0.045157,
+        "upper": 0.049199,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.045313,
+        0.048785
+      ],
+      "mae_ci_95": [
+        0.045157,
+        0.049199
+      ]
+    },
+    "event_metrics_harmonic_ridge": {
+      "precision": null,
+      "recall": 0.0,
+      "f1": null,
+      "peak_error_m": 0.0856,
+      "threshold_agree": 0.9987
+    }
+  },
+  "9410230": {
+    "station": "La Jolla, CA",
+    "holdout_type": "temporal",
+    "data_source": "NOAA_COOPS_MOCK",
+    "mock_used": true,
+    "station_id": "9410230",
+    "begin_date": "20240101",
+    "end_date": "20240128",
+    "n_train": 4860,
+    "n_test": 1621,
+    "train_start": "2024-01-01 00:00:00+00:00",
+    "train_end": "2024-01-21 05:54:00+00:00",
+    "test_start": "2024-01-21 06:00:00+00:00",
+    "test_end": "2024-01-28 00:00:00+00:00",
+    "event_threshold_m": 0.8325,
+    "persistence_rolling": {
+      "mae": 0.05980024203561389,
+      "rmse": 0.07523236901750611,
+      "r2": 0.9682967445961259,
+      "nse": 0.9682967445961259,
+      "corr": 0.9841541274901664
+    },
+    "harmonic_ridge": {
+      "mae": 0.04089349166844445,
+      "rmse": 0.05143451102340583,
+      "r2": 0.9845760959728573,
+      "nse": 0.9845760959728573,
+      "corr": 0.9922865464300604,
+      "mae_block_ci_95": {
+        "lower": 0.039245,
+        "upper": 0.042572,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.039649,
+        0.042339
+      ],
+      "mae_ci_95": [
+        0.039245,
+        0.042572
+      ]
+    },
+    "grad_boost": {
+      "mae": 0.046468589679261936,
+      "rmse": 0.05804178250812499,
+      "r2": 0.9803588656502981,
+      "nse": 0.9803588656502981,
+      "corr": 0.9902149846011029,
+      "mae_block_ci_95": {
+        "lower": 0.044805,
+        "upper": 0.048238,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.044937,
+        0.048117
+      ],
+      "mae_ci_95": [
+        0.044805,
+        0.048238
+      ]
+    },
+    "event_metrics_harmonic_ridge": {
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "peak_error_m": null,
+      "threshold_agree": 1.0
+    }
+  },
+  "1612340_storm": {
+    "station": "Honolulu, HI (storm period)",
+    "holdout_type": "event",
+    "data_source": "NOAA_COOPS_MOCK",
+    "mock_used": true,
+    "station_id": "1612340",
+    "begin_date": "20240112",
+    "end_date": "20240118",
+    "n_train": 1080,
+    "n_test": 361,
+    "train_start": "2024-01-12 00:00:00+00:00",
+    "train_end": "2024-01-16 11:54:00+00:00",
+    "test_start": "2024-01-16 12:00:00+00:00",
+    "test_end": "2024-01-18 00:00:00+00:00",
+    "event_threshold_m": 0.8681,
+    "persistence_rolling": {
+      "mae": 0.060253213741723384,
+      "rmse": 0.0741226647787458,
+      "r2": 0.9633816014558733,
+      "nse": 0.9633816014558733,
+      "corr": 0.9816949746099323
+    },
+    "harmonic_ridge": {
+      "mae": 0.0460300130502908,
+      "rmse": 0.05717036764006476,
+      "r2": 0.9768018678946265,
+      "nse": 0.9768018678946265,
+      "corr": 0.9902198037235952,
+      "mae_block_ci_95": {
+        "lower": 0.042546,
+        "upper": 0.04941,
+        "block_length": 7,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 321
+      },
+      "mae_iid_ci_95": [
+        0.042229,
+        0.049931
+      ],
+      "mae_ci_95": [
+        0.042546,
+        0.04941
+      ]
+    },
+    "grad_boost": {
+      "mae": 0.050222643370457884,
+      "rmse": 0.06313359347007233,
+      "r2": 0.971710057410722,
+      "nse": 0.971710057410722,
+      "corr": 0.9859608464484642,
+      "mae_block_ci_95": {
+        "lower": 0.045534,
+        "upper": 0.054967,
+        "block_length": 7,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 321
+      },
+      "mae_iid_ci_95": [
+        0.046233,
+        0.054288
+      ],
+      "mae_ci_95": [
+        0.045534,
+        0.054967
+      ]
+    },
+    "event_metrics_harmonic_ridge": {
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "peak_error_m": null,
+      "threshold_agree": 1.0
+    }
+  }
+}

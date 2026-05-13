@@ -1,0 +1,196 @@
+{
+  "_meta": {
+    "train_frac": 0.75,
+    "threshold_k": 2.0
+  },
+  "DEMO-HNL": {
+    "station_id": "DEMO-HNL",
+    "train_cutoff_ts": "2024-03-08 12:00:00+00:00",
+    "train_threshold_m": 0.493,
+    "threshold_k": 2.0,
+    "n_train": 16200,
+    "n_test": 5400,
+    "test_start": "2024-03-08 12:00:00+00:00",
+    "test_end": "2024-03-30 23:54:00+00:00",
+    "test_obs_episodes": 2,
+    "persistence_rolling": {
+      "sample": {
+        "mae": 0.023412925925925927,
+        "rmse": 0.029410675058682476,
+        "r2": 0.9846803617232739,
+        "nse": 0.9846803617232739,
+        "corr": 0.9923404464214644
+      },
+      "event_sample": {
+        "precision": 0.9697,
+        "recall": 0.9697,
+        "f1": 0.9697,
+        "peak_error_m": 0.0639,
+        "threshold_agree": 0.9993
+      },
+      "episode": {
+        "n_obs_episodes": 2,
+        "n_pred_episodes": 2,
+        "n_matched": 2,
+        "episode_precision": 1.0,
+        "episode_recall": 1.0,
+        "episode_f1": 1.0,
+        "peak_height_error_m": 0.0,
+        "peak_time_error_s": 360.0,
+        "lead_time_error_s": 360.0,
+        "threshold_m": 0.49304817946495827
+      }
+    },
+    "harmonic_ridge": {
+      "sample": {
+        "mae": 0.01767067591333042,
+        "rmse": 0.02247938967113528,
+        "r2": 0.9910724908957746,
+        "nse": 0.9910724908957746,
+        "corr": 0.9955384419570675
+      },
+      "event_sample": {
+        "precision": 0.9403,
+        "recall": 0.9545,
+        "f1": 0.9474,
+        "peak_error_m": 0.09,
+        "threshold_agree": 0.9987
+      },
+      "episode": {
+        "n_obs_episodes": 2,
+        "n_pred_episodes": 1,
+        "n_matched": 1,
+        "episode_precision": 1.0,
+        "episode_recall": 0.5,
+        "episode_f1": 0.6667,
+        "peak_height_error_m": 0.043536,
+        "peak_time_error_s": 1800.0,
+        "lead_time_error_s": 1080.0,
+        "threshold_m": 0.49304817946495827
+      }
+    },
+    "grad_boost": {
+      "sample": {
+        "mae": 0.022249283981561806,
+        "rmse": 0.03909980832264184,
+        "r2": 0.9729908742354189,
+        "nse": 0.9729908742354189,
+        "corr": 0.9867173832860504
+      },
+      "event_sample": {
+        "precision": null,
+        "recall": 0.0,
+        "f1": null,
+        "peak_error_m": 0.3831,
+        "threshold_agree": 0.9877
+      },
+      "episode": {
+        "n_obs_episodes": 2,
+        "n_pred_episodes": 0,
+        "n_matched": 0,
+        "episode_precision": null,
+        "episode_recall": 0.0,
+        "episode_f1": null,
+        "peak_height_error_m": null,
+        "peak_time_error_s": null,
+        "lead_time_error_s": null,
+        "threshold_m": 0.49304817946495827
+      }
+    }
+  },
+  "DEMO-SFO": {
+    "station_id": "DEMO-SFO",
+    "train_cutoff_ts": "2024-03-08 12:00:00+00:00",
+    "train_threshold_m": 1.0317,
+    "threshold_k": 2.0,
+    "n_train": 16200,
+    "n_test": 5400,
+    "test_start": "2024-03-08 12:00:00+00:00",
+    "test_end": "2024-03-30 23:54:00+00:00",
+    "test_obs_episodes": 13,
+    "persistence_rolling": {
+      "sample": {
+        "mae": 0.028956444444444444,
+        "rmse": 0.036064382706487576,
+        "r2": 0.995154160268741,
+        "nse": 0.995154160268741,
+        "corr": 0.9975772885637731
+      },
+      "event_sample": {
+        "precision": 0.9547,
+        "recall": 0.9547,
+        "f1": 0.9547,
+        "peak_error_m": 0.1116,
+        "threshold_agree": 0.9952
+      },
+      "episode": {
+        "n_obs_episodes": 13,
+        "n_pred_episodes": 13,
+        "n_matched": 10,
+        "episode_precision": 0.7692,
+        "episode_recall": 0.7692,
+        "episode_f1": 0.7692,
+        "peak_height_error_m": 0.0,
+        "peak_time_error_s": 360.0,
+        "lead_time_error_s": 360.0,
+        "threshold_m": 1.0317303688783073
+      }
+    },
+    "harmonic_ridge": {
+      "sample": {
+        "mae": 0.017761949714440273,
+        "rmse": 0.02260012889981037,
+        "r2": 0.9980804863648207,
+        "nse": 0.9980804863648207,
+        "corr": 0.9990480683940847
+      },
+      "event_sample": {
+        "precision": 0.982,
+        "recall": 0.9512,
+        "f1": 0.9664,
+        "peak_error_m": 0.1043,
+        "threshold_agree": 0.9965
+      },
+      "episode": {
+        "n_obs_episodes": 13,
+        "n_pred_episodes": 10,
+        "n_matched": 10,
+        "episode_precision": 1.0,
+        "episode_recall": 0.7692,
+        "episode_f1": 0.8696,
+        "peak_height_error_m": 0.036162,
+        "peak_time_error_s": 792.0,
+        "lead_time_error_s": 144.0,
+        "threshold_m": 1.0317303688783073
+      }
+    },
+    "grad_boost": {
+      "sample": {
+        "mae": 0.021420819239201538,
+        "rmse": 0.028465940425045317,
+        "r2": 0.9969547676034585,
+        "nse": 0.9969547676034585,
+        "corr": 0.9984804671965171
+      },
+      "event_sample": {
+        "precision": 0.9819,
+        "recall": 0.9477,
+        "f1": 0.9645,
+        "peak_error_m": 0.2146,
+        "threshold_agree": 0.9963
+      },
+      "episode": {
+        "n_obs_episodes": 13,
+        "n_pred_episodes": 11,
+        "n_matched": 10,
+        "episode_precision": 0.9091,
+        "episode_recall": 0.7692,
+        "episode_f1": 0.8333,
+        "peak_height_error_m": 0.035903,
+        "peak_time_error_s": 864.0,
+        "lead_time_error_s": 288.0,
+        "threshold_m": 1.0317303688783073
+      }
+    }
+  }
+}
