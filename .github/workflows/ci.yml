@@ -46,6 +46,12 @@ jobs:
       - name: Event-holdout evaluation (episode metrics)
         run: python -m scripts.evaluate_events
 
+      - name: Rolling-origin evaluation
+        run: python -m scripts.evaluate_rolling_origin
+
+      - name: Conformal coverage evaluation
+        run: python -m scripts.evaluate_conformal
+
       - name: Prototype benchmark (tidecast data)
         run: python -m scripts.run_benchmark
 

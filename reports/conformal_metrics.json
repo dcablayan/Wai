@@ -1,0 +1,100 @@
+{
+  "_meta": {
+    "data_source": "DEMO_SYNTHETIC",
+    "nominal_coverage": 0.9,
+    "train_frac": 0.75,
+    "cal_frac_of_train": 0.15
+  },
+  "DEMO-HNL": {
+    "station_id": "DEMO-HNL",
+    "split": {
+      "train_fit_start": "2024-01-01 00:00:00+00:00",
+      "train_fit_end": "2024-02-27 08:54:00+00:00",
+      "cal_start": "2024-02-27 09:00:00+00:00",
+      "cal_end": "2024-03-08 11:54:00+00:00",
+      "test_start": "2024-03-08 12:00:00+00:00",
+      "test_end": "2024-03-30 23:54:00+00:00",
+      "n_train_fit": 13770,
+      "n_cal_window": 2430,
+      "n_test_window": 5400
+    },
+    "threshold_source": "train_fit_plus_cal_mean_plus_2std",
+    "event_threshold_m": 0.49304817946495827,
+    "models": {
+      "harmonic_ridge": {
+        "model": "harmonic_ridge",
+        "nominal_coverage": 0.9,
+        "empirical_coverage": 0.8753731343283582,
+        "event_coverage": 0.6515151515151515,
+        "non_event_coverage": 0.8781639591990933,
+        "qhat": 0.03397114272004176,
+        "n_cal": 2390,
+        "mean_interval_width": 0.06794228544008352,
+        "n_test": 5360,
+        "n_event_samples": 66,
+        "n_non_event_samples": 5294,
+        "event_threshold_m": 0.49304817946495827
+      },
+      "grad_boost": {
+        "model": "grad_boost",
+        "nominal_coverage": 0.9,
+        "empirical_coverage": 0.8774253731343283,
+        "event_coverage": 0.015151515151515152,
+        "non_event_coverage": 0.8881752927842841,
+        "qhat": 0.038596527937223526,
+        "n_cal": 2390,
+        "mean_interval_width": 0.07719305587444705,
+        "n_test": 5360,
+        "n_event_samples": 66,
+        "n_non_event_samples": 5294,
+        "event_threshold_m": 0.49304817946495827
+      }
+    }
+  },
+  "DEMO-SFO": {
+    "station_id": "DEMO-SFO",
+    "split": {
+      "train_fit_start": "2024-01-01 00:00:00+00:00",
+      "train_fit_end": "2024-02-27 08:54:00+00:00",
+      "cal_start": "2024-02-27 09:00:00+00:00",
+      "cal_end": "2024-03-08 11:54:00+00:00",
+      "test_start": "2024-03-08 12:00:00+00:00",
+      "test_end": "2024-03-30 23:54:00+00:00",
+      "n_train_fit": 13770,
+      "n_cal_window": 2430,
+      "n_test_window": 5400
+    },
+    "threshold_source": "train_fit_plus_cal_mean_plus_2std",
+    "event_threshold_m": 1.0317303688783073,
+    "models": {
+      "harmonic_ridge": {
+        "model": "harmonic_ridge",
+        "nominal_coverage": 0.9,
+        "empirical_coverage": 0.8904850746268657,
+        "event_coverage": 0.7630662020905923,
+        "non_event_coverage": 0.8976936723832052,
+        "qhat": 0.035610386097120195,
+        "n_cal": 2390,
+        "mean_interval_width": 0.07122077219424039,
+        "n_test": 5360,
+        "n_event_samples": 287,
+        "n_non_event_samples": 5073,
+        "event_threshold_m": 1.0317303688783073
+      },
+      "grad_boost": {
+        "model": "grad_boost",
+        "nominal_coverage": 0.9,
+        "empirical_coverage": 0.8944029850746269,
+        "event_coverage": 0.8083623693379791,
+        "non_event_coverage": 0.899270648531441,
+        "qhat": 0.04343646487948183,
+        "n_cal": 2390,
+        "mean_interval_width": 0.08687292975896366,
+        "n_test": 5360,
+        "n_event_samples": 287,
+        "n_non_event_samples": 5073,
+        "event_threshold_m": 1.0317303688783073
+      }
+    }
+  }
+}

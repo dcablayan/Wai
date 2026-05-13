@@ -64,3 +64,17 @@ def test_report_with_metrics():
         content = out.read_text()
         assert "persistence" in content
         assert "harmonic_ridge" in content
+
+
+def test_report_default_threshold_uses_reference_window():
+    df = _demo_df()
+    reference = df.iloc[:100].copy()
+    expected = float(reference["water_level"].mean() + 2 * reference["water_level"].std())
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "report.html"
+        generate_report(df, {}, out, threshold_reference_df=reference)
+        content = out.read_text()
+        assert "Threshold Source" in content
+        assert "Threshold Reference Range" in content
+        assert "first_75_percent_reference_window" in content
+        assert f"{expected:.2f}" in content

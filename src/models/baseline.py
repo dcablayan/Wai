@@ -13,12 +13,8 @@ HarmonicRidgeModel
 
 WaveGRUModel
     DataFrame adapter wrapping WaveGRUPrototype (dcablayan/tideformer).
-    Bidirectional double-exponential smoothing with attention-like weighting.
+    Smoothing heuristic with attention-like weighting, not a real GRU.
     Operates on raw values; no feature engineering required.
-
-The code is structured so that substituting an LSTM or Transformer encoder
-for the Ridge estimator requires only swapping the estimator inside
-HarmonicRidgeModel.fit() — the feature pipeline stays the same.
 """
 
 from __future__ import annotations
@@ -31,7 +27,7 @@ from sklearn.linear_model import Ridge
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from src.features.engineering import build_feature_matrix
+from src.features.engineering import build_feature_frame, build_feature_matrix
 from src.models.metrics import compute_metrics
 
 
@@ -64,8 +60,8 @@ class HarmonicRidgeModel:
     - This is NOT an advanced deep-learning model; it is a strong linear
       baseline that is honest about what it can predict.
     - MAE / RMSE on demo data are reported in reports/model_metrics.json.
-    - To extend to LSTM/Transformer: replace the Pipeline with a torch/keras
-      model and keep build_feature_matrix() for feature extraction.
+    - The current project intentionally keeps this as a lightweight
+      scikit-learn baseline.
     """
 
     def __init__(self, alpha: float = 1.0) -> None:
@@ -90,6 +86,20 @@ class HarmonicRidgeModel:
         X = X[self._feature_cols]
         return self._pipeline.predict(X)
 
+    def predict_aligned(self, df: pd.DataFrame, target_col: str = "water_level") -> pd.DataFrame:
+        """Return timestamps, actual values, and predictions on valid feature rows."""
+        if self._pipeline is None:
+            raise RuntimeError("Call fit() before predict_aligned()")
+        feat = build_feature_frame(df, target_col=target_col)
+        X = feat[self._feature_cols]
+        pred = self._pipeline.predict(X)
+        return pd.DataFrame({
+            "timestamp": feat["timestamp"].values,
+            "actual": feat[target_col].values,
+            "prediction": pred,
+            "_source_row": feat["_source_row"].astype(int).values,
+        })
+
     def evaluate(self, df: pd.DataFrame, target_col: str = "water_level") -> dict:
         """Return metrics dict for this model on the given DataFrame."""
         X, y = build_feature_matrix(df, target_col)
@@ -101,11 +111,12 @@ class HarmonicRidgeModel:
 class WaveGRUModel:
     """DataFrame adapter for WaveGRUPrototype (dcablayan/tideformer).
 
-    Wraps the pure-Python bidirectional double-exponential smoothing prototype
+    Wraps the pure-Python double-exponential smoothing prototype
     so it fits the same DataFrame API as PersistenceModel and HarmonicRidgeModel.
 
-    This model operates on raw values only — no tidal feature engineering is
-    applied.  It provides a useful complementary baseline: strong for short
+    This is not a real GRU or deep-learning model. It operates on raw values
+    only — no tidal feature engineering is applied.  It provides a useful
+    complementary baseline: strong for short
     horizons, interpretable, dependency-free in its core implementation.
     """
 

@@ -11,8 +11,8 @@ Models evaluated
                            primary comparator for 1-step models.
 3. HarmonicRidgeModel    — 8-constituent tidal harmonics + temporal covariates
                            + lags + rolling features, fitted with Ridge.
-4. WaveGRUModel          — bidirectional double-EMA with attention (pure Python,
-                           adapted from dcablayan/tideformer WaveGRUPrototype).
+4. WaveGRUModel          — smoothing heuristic with attention-like weighting
+                           (not a real GRU or deep-learning model).
 5. GradBoostModel        — HistGradientBoostingRegressor over the same feature
                            matrix as HarmonicRidgeModel (non-linear baseline).
 

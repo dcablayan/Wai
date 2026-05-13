@@ -12,11 +12,16 @@ import pytest
 
 from scripts.evaluate_noaa_public import (
     LiveNOAAFetchError,
+    NOAAReportIntegrityError,
     NOAA_STATIONS,
+    _assert_live_report_has_no_mock,
     evaluate_station,
     fetch_noaa_df,
+    fetch_noaa_pair,
     format_results_md,
+    merge_observations_predictions,
     _make_mock_noaa_df,
+    _make_mock_noaa_predictions_df,
 )
 
 
@@ -31,15 +36,23 @@ def _get_mock_df(n: int = 500) -> pd.DataFrame:
         + 0.3 * np.sin(2 * np.pi * t_h / 24.0)
         + 0.05 * rng.standard_normal(n)
     )
+    noaa_prediction = (
+        0.5 * np.sin(2 * np.pi * t_h / 12.42)
+        + 0.3 * np.sin(2 * np.pi * t_h / 24.0)
+    )
     return pd.DataFrame({
         "timestamp": timestamps,
         "station_id": "TEST",
+        "observed_water_level": wl,
+        "noaa_prediction": noaa_prediction,
         "water_level": wl,
         "datum": "MLLW",
         "units": "m",
         "lat": 21.3,
         "lon": -157.8,
         "source": "NOAA_COOPS_MOCK",
+        "observation_source": "NOAA_COOPS_MOCK",
+        "prediction_source": "NOAA_PREDICTIONS_MOCK",
     })
 
 
@@ -54,6 +67,12 @@ def test_fetch_noaa_df_offline_returns_dataframe():
     assert prov["station_id"] == "9414290"
     assert prov["begin_date"] == "20240101"
     assert prov["end_date"] == "20240128"
+
+
+def test_fetch_noaa_df_offline_is_reproducible():
+    df1, _ = fetch_noaa_df("9414290", "20240101", "20240102", 37.8, -122.5, offline=True)
+    df2, _ = fetch_noaa_df("9414290", "20240101", "20240102", 37.8, -122.5, offline=True)
+    assert df1["water_level"].equals(df2["water_level"])
 
 
 def test_fetch_noaa_df_offline_schema():
@@ -76,7 +95,7 @@ def test_fetch_noaa_live_raises_on_failure_without_allow_mock(monkeypatch):
         raise RuntimeError("simulated network error")
 
     monkeypatch.setattr(ep, "load_noaa_data", _boom)
-    with pytest.raises(LiveNOAAFetchError, match="Live NOAA fetch failed"):
+    with pytest.raises(LiveNOAAFetchError, match="Live NOAA observation fetch failed"):
         fetch_noaa_df("9414290", "20240101", "20240128", 37.8, -122.5,
                       offline=False, allow_mock=False)
 
@@ -93,7 +112,7 @@ def test_fetch_noaa_live_falls_back_when_allow_mock(monkeypatch):
                              offline=False, allow_mock=True)
     assert len(df) > 0
     assert prov["mock_used"] is True
-    assert prov["reason"] == "live_fetch_failed"
+    assert prov["reason"] == "live_observation_fetch_failed"
     assert "error" in prov
 
 
@@ -118,13 +137,52 @@ def test_make_mock_noaa_df_water_level_numeric():
     assert not df["water_level"].isna().all()
 
 
+def test_merge_observations_predictions_aligns_by_timestamp():
+    obs = _make_mock_noaa_df("9414290", "20240101", "20240102", 37.8, -122.5)
+    pred = _make_mock_noaa_predictions_df("9414290", "20240101", "20240102", 37.8, -122.5)
+    pred = pred.iloc[5:].reset_index(drop=True)
+    merged = merge_observations_predictions(obs, pred)
+    assert len(merged) == len(pred)
+    assert merged["timestamp"].equals(pred["timestamp"])
+    assert "observed_water_level" in merged
+    assert "noaa_prediction" in merged
+    assert (merged["datum"] == "MLLW").all()
+    assert (merged["units"] == "m").all()
+
+
+def test_merge_observations_predictions_rejects_datum_mismatch():
+    obs = _make_mock_noaa_df("9414290", "20240101", "20240102", 37.8, -122.5)
+    pred = _make_mock_noaa_predictions_df("9414290", "20240101", "20240102", 37.8, -122.5)
+    pred["datum"] = "NAVD"
+    with pytest.raises(ValueError, match="datum mismatch"):
+        merge_observations_predictions(obs, pred)
+
+
+def test_merge_observations_predictions_rejects_unit_mismatch():
+    obs = _make_mock_noaa_df("9414290", "20240101", "20240102", 37.8, -122.5)
+    pred = _make_mock_noaa_predictions_df("9414290", "20240101", "20240102", 37.8, -122.5)
+    pred["units"] = "ft"
+    with pytest.raises(ValueError, match="unit mismatch"):
+        merge_observations_predictions(obs, pred)
+
+
+def test_fetch_noaa_pair_offline_marks_mock():
+    merged, prov = fetch_noaa_pair("9414290", "20240101", "20240102", 37.8, -122.5, offline=True)
+    assert len(merged) > 0
+    assert prov["mock_used"] is True
+    assert prov["data_source"] == "NOAA_COOPS_MOCK"
+    assert prov["prediction_source"] == "NOAA_PREDICTIONS_MOCK"
+
+
 # ── evaluate_station ──────────────────────────────────────────────────────────
 
 def test_evaluate_station_returns_required_keys():
     df = _get_mock_df(n=500)
     res = evaluate_station(df, station_label="TEST", holdout_type="temporal")
     for key in ("station", "holdout_type", "n_train", "n_test",
-                "persistence_rolling", "harmonic_ridge", "grad_boost"):
+                "rolling_persistence", "noaa_prediction",
+                "noaa_residual_persistence", "harmonic_ridge",
+                "grad_boost", "hybrid_residual_ridge"):
         assert key in res, f"Missing result key: {key}"
 
 
@@ -139,9 +197,18 @@ def test_evaluate_station_harmonic_ridge_has_metrics():
 def test_evaluate_station_persistence_has_metrics():
     df = _get_mock_df(n=500)
     res = evaluate_station(df, station_label="TEST")
-    m = res.get("persistence_rolling", {})
+    m = res.get("rolling_persistence", {})
     assert "mae" in m
     assert math.isfinite(m["mae"])
+
+
+def test_evaluate_station_noaa_baseline_has_skill_fields():
+    df = _get_mock_df(n=500)
+    res = evaluate_station(df, station_label="TEST")
+    for key in ("noaa_prediction", "hybrid_residual_ridge"):
+        m = res[key]
+        assert "mae_skill_vs_rolling_persistence" in m
+        assert "mae_skill_vs_noaa_prediction" in m
 
 
 def test_evaluate_station_too_short_returns_error():
@@ -192,18 +259,19 @@ def test_format_results_md_contains_stations():
     md = format_results_md(res)
     assert "My Station" in md
     assert "HarmonicRidge" in md
-    assert "Persistence" in md
+    assert "Rolling persistence" in md
 
 
 def test_format_results_md_has_notes():
     md = format_results_md({})
-    assert "real NOAA data" in md.lower() or "real" in md.lower()
+    assert "NOAA tidal predictions" in md
+    assert "Mock reports" in md
 
 
 # ── offline integration ───────────────────────────────────────────────────────
 
 def test_main_runs_offline(tmp_path, monkeypatch):
-    """Running main() in NOAA_OFFLINE=1 mode should produce both output files."""
+    """Running main() in NOAA_OFFLINE=1 mode should produce mock output files only."""
     import scripts.evaluate_noaa_public as ep
 
     monkeypatch.setattr(ep, "REPORTS_DIR", tmp_path)
@@ -213,15 +281,18 @@ def test_main_runs_offline(tmp_path, monkeypatch):
 
     ep.main([])
 
-    assert (tmp_path / "noaa_public_metrics.json").exists()
-    assert (tmp_path / "noaa_public_metrics.md").exists()
+    assert (tmp_path / "noaa_mock_metrics.json").exists()
+    assert (tmp_path / "noaa_mock_metrics.md").exists()
+    assert not (tmp_path / "noaa_live_metrics.json").exists()
+    assert not (tmp_path / "noaa_live_metrics.md").exists()
 
-    with open(tmp_path / "noaa_public_metrics.json") as f:
+    with open(tmp_path / "noaa_mock_metrics.json") as f:
         data = json.load(f)
     # New schema: _meta + 5 stations + storm = at least 7 top-level keys
     assert "_meta" in data
     assert data["_meta"]["offline_mode"] is True
     assert data["_meta"]["any_mock_used"] is True
+    assert data["_meta"]["report_kind"] == "mock"
     # Each station record must carry provenance fields
     station_entries = [v for k, v in data.items() if not k.startswith("_")]
     assert len(station_entries) >= 5
@@ -230,6 +301,8 @@ def test_main_runs_offline(tmp_path, monkeypatch):
         assert rec["mock_used"] is True
         assert "begin_date" in rec
         assert "end_date" in rec
+        assert "noaa_prediction" in rec
+        assert "hybrid_residual_ridge" in rec
 
 
 def test_main_live_mode_hard_fails_when_fetch_breaks(tmp_path, monkeypatch):
@@ -245,3 +318,32 @@ def test_main_live_mode_hard_fails_when_fetch_breaks(tmp_path, monkeypatch):
     monkeypatch.setattr(ep, "load_noaa_data", _boom)
     with pytest.raises(LiveNOAAFetchError):
         ep.main([])  # no --allow-mock
+
+
+def test_live_report_guard_rejects_mock_records():
+    summary = {
+        "_meta": {"report_kind": "live"},
+        "station": {"mock_used": True},
+    }
+    with pytest.raises(NOAAReportIntegrityError):
+        _assert_live_report_has_no_mock(summary, "live")
+
+
+def test_main_allow_mock_uses_explicit_report_name(tmp_path, monkeypatch):
+    """Live --allow-mock may use mock data, but not under the live report name."""
+    import scripts.evaluate_noaa_public as ep
+
+    monkeypatch.setattr(ep, "REPORTS_DIR", tmp_path)
+    monkeypatch.delenv("NOAA_OFFLINE", raising=False)
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("simulated network outage")
+
+    monkeypatch.setattr(ep, "load_noaa_data", _boom)
+    monkeypatch.setattr(ep, "load_noaa_predictions", _boom)
+
+    ep.main(["--allow-mock"])
+
+    assert (tmp_path / "noaa_allow_mock_metrics.json").exists()
+    assert (tmp_path / "noaa_allow_mock_metrics.md").exists()
+    assert not (tmp_path / "noaa_live_metrics.json").exists()

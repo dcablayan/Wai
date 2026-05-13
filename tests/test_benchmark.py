@@ -37,7 +37,9 @@ def test_benchmark_station_returns_expected_models():
         csv_path = Path(tmpdir) / "demo-station_tidecast.csv"
         _write_tidecast_csv(csv_path, n=300)
         results = benchmark_station(csv_path)
-    assert set(results.keys()) == {"TinyTide", "HarmonicNet", "WaveGRU", "SurgeNet"}
+    assert set(results.keys()) == {
+        "Persistence", "TinyTide", "HarmonicNet", "WaveGRU", "SurgeNet"
+    }
 
 
 def test_benchmark_station_rmse_are_finite():
@@ -76,4 +78,5 @@ def test_benchmark_writes_report_file(tmp_path, monkeypatch):
     assert out.exists(), "benchmark_results.md was not created"
     content = out.read_text()
     assert "station-a_tidecast" in content
+    assert "Persistence" in content
     assert "ʻAle Iki" in content
