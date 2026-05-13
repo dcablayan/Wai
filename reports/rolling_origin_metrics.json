@@ -1,0 +1,236 @@
+{
+  "_meta": {
+    "data_source": "DEMO_SYNTHETIC",
+    "n_folds_requested": 3,
+    "min_train_frac": 0.5,
+    "test_frac": 0.1
+  },
+  "DEMO-HNL": {
+    "station_id": "DEMO-HNL",
+    "n_folds": 3,
+    "folds": [
+      {
+        "fold": 1,
+        "train_start": "2024-01-01 00:00:00+00:00",
+        "train_end": "2024-02-14 23:54:00+00:00",
+        "test_start": "2024-02-15 00:00:00+00:00",
+        "test_end": "2024-02-23 23:54:00+00:00",
+        "n_train": 10800,
+        "n_test": 2160,
+        "rolling_persistence": {
+          "mae": 0.02349569444444444,
+          "rmse": 0.029435318842682346,
+          "r2": 0.9872638018256258,
+          "nse": 0.9872638018256258,
+          "corr": 0.9936329851337456,
+          "mae_skill_vs_rolling_persistence": 0.0,
+          "rmse_skill_vs_rolling_persistence": 0.0
+        },
+        "harmonic_ridge": {
+          "mae": 0.016519682056749765,
+          "rmse": 0.020890241145675375,
+          "r2": 0.9936596169872891,
+          "nse": 0.9936596169872891,
+          "corr": 0.996840093715636,
+          "mae_skill_vs_rolling_persistence": 0.29800705645914916,
+          "rmse_skill_vs_rolling_persistence": 0.29123399633038016
+        },
+        "grad_boost": {
+          "mae": 0.01852327765565045,
+          "rmse": 0.02348276623771917,
+          "r2": 0.9919882553881344,
+          "nse": 0.9919882553881344,
+          "corr": 0.9960356686286024,
+          "mae_skill_vs_rolling_persistence": 0.21286558900801877,
+          "rmse_skill_vs_rolling_persistence": 0.20327456895529283
+        }
+      },
+      {
+        "fold": 2,
+        "train_start": "2024-01-01 00:00:00+00:00",
+        "train_end": "2024-03-03 23:54:00+00:00",
+        "test_start": "2024-03-04 00:00:00+00:00",
+        "test_end": "2024-03-12 23:54:00+00:00",
+        "n_train": 15120,
+        "n_test": 2160,
+        "rolling_persistence": {
+          "mae": 0.023340231481481483,
+          "rmse": 0.02949604924894682,
+          "r2": 0.9878250806640779,
+          "nse": 0.9878250806640779,
+          "corr": 0.993913920228004,
+          "mae_skill_vs_rolling_persistence": 0.0,
+          "rmse_skill_vs_rolling_persistence": 0.0
+        },
+        "harmonic_ridge": {
+          "mae": 0.016745052600899386,
+          "rmse": 0.020998752430353568,
+          "r2": 0.9939109847696854,
+          "nse": 0.9939109847696854,
+          "corr": 0.9969525477141222,
+          "mae_skill_vs_rolling_persistence": 0.28595686086413086,
+          "rmse_skill_vs_rolling_persistence": 0.29056801400087673
+        },
+        "grad_boost": {
+          "mae": 0.018440414126968806,
+          "rmse": 0.023304965599099472,
+          "r2": 0.9925000735220075,
+          "nse": 0.9925000735220075,
+          "corr": 0.996258622319892,
+          "mae_skill_vs_rolling_persistence": 0.21366319330170314,
+          "rmse_skill_vs_rolling_persistence": 0.2126537953411165
+        }
+      },
+      {
+        "fold": 3,
+        "train_start": "2024-01-01 00:00:00+00:00",
+        "train_end": "2024-03-21 23:54:00+00:00",
+        "test_start": "2024-03-22 00:00:00+00:00",
+        "test_end": "2024-03-30 23:54:00+00:00",
+        "n_train": 19440,
+        "n_test": 2160,
+        "rolling_persistence": {
+          "mae": 0.02325837962962963,
+          "rmse": 0.029212428623979745,
+          "r2": 0.9784515243556924,
+          "nse": 0.9784515243556924,
+          "corr": 0.9892296778300225,
+          "mae_skill_vs_rolling_persistence": 0.0,
+          "rmse_skill_vs_rolling_persistence": 0.0
+        },
+        "harmonic_ridge": {
+          "mae": 0.0175703225994696,
+          "rmse": 0.022212728058502836,
+          "r2": 0.9873602100795192,
+          "nse": 0.9873602100795192,
+          "corr": 0.9936874860963224,
+          "mae_skill_vs_rolling_persistence": 0.24091915415170262,
+          "rmse_skill_vs_rolling_persistence": 0.23730147840754257
+        },
+        "grad_boost": {
+          "mae": 0.019056946798957,
+          "rmse": 0.023844433411009936,
+          "r2": 0.9854350140243648,
+          "nse": 0.9854350140243648,
+          "corr": 0.9927006362260866,
+          "mae_skill_vs_rolling_persistence": 0.17669335815866216,
+          "rmse_skill_vs_rolling_persistence": 0.18127507513307928
+        }
+      }
+    ]
+  },
+  "DEMO-SFO": {
+    "station_id": "DEMO-SFO",
+    "n_folds": 3,
+    "folds": [
+      {
+        "fold": 1,
+        "train_start": "2024-01-01 00:00:00+00:00",
+        "train_end": "2024-02-14 23:54:00+00:00",
+        "test_start": "2024-02-15 00:00:00+00:00",
+        "test_end": "2024-02-23 23:54:00+00:00",
+        "n_train": 10800,
+        "n_test": 2160,
+        "rolling_persistence": {
+          "mae": 0.028208101851851852,
+          "rmse": 0.035211005421285226,
+          "r2": 0.9953706932555882,
+          "nse": 0.9953706932555882,
+          "corr": 0.9976842499681156,
+          "mae_skill_vs_rolling_persistence": 0.0,
+          "rmse_skill_vs_rolling_persistence": 0.0
+        },
+        "harmonic_ridge": {
+          "mae": 0.016704220473306684,
+          "rmse": 0.02088217319972624,
+          "r2": 0.9983687648294565,
+          "nse": 0.9983687648294565,
+          "corr": 0.9991861168575064,
+          "mae_skill_vs_rolling_persistence": 0.40928801187313724,
+          "rmse_skill_vs_rolling_persistence": 0.4084104261467062
+        },
+        "grad_boost": {
+          "mae": 0.0205657941730911,
+          "rmse": 0.025607566801905225,
+          "r2": 0.9975469758823606,
+          "nse": 0.9975469758823606,
+          "corr": 0.9987749758835233,
+          "mae_skill_vs_rolling_persistence": 0.2727310332854076,
+          "rmse_skill_vs_rolling_persistence": 0.27454056688134987
+        }
+      },
+      {
+        "fold": 2,
+        "train_start": "2024-01-01 00:00:00+00:00",
+        "train_end": "2024-03-03 23:54:00+00:00",
+        "test_start": "2024-03-04 00:00:00+00:00",
+        "test_end": "2024-03-12 23:54:00+00:00",
+        "n_train": 15120,
+        "n_test": 2160,
+        "rolling_persistence": {
+          "mae": 0.030843981481481476,
+          "rmse": 0.038248917801200114,
+          "r2": 0.9956450190577155,
+          "nse": 0.9956450190577155,
+          "corr": 0.9978223882030928,
+          "mae_skill_vs_rolling_persistence": 0.0,
+          "rmse_skill_vs_rolling_persistence": 0.0
+        },
+        "harmonic_ridge": {
+          "mae": 0.016942673500001178,
+          "rmse": 0.021434088272769,
+          "r2": 0.9986497549945672,
+          "nse": 0.9986497549945672,
+          "corr": 0.9993252149687784,
+          "mae_skill_vs_rolling_persistence": 0.4507333631017991,
+          "rmse_skill_vs_rolling_persistence": 0.43940834180208976
+        },
+        "grad_boost": {
+          "mae": 0.02125067191193007,
+          "rmse": 0.026673458388734632,
+          "r2": 0.9979089654604006,
+          "nse": 0.9979089654604006,
+          "corr": 0.998955165237921,
+          "mae_skill_vs_rolling_persistence": 0.31107182742487016,
+          "rmse_skill_vs_rolling_persistence": 0.30237675250172935
+        }
+      },
+      {
+        "fold": 3,
+        "train_start": "2024-01-01 00:00:00+00:00",
+        "train_end": "2024-03-21 23:54:00+00:00",
+        "test_start": "2024-03-22 00:00:00+00:00",
+        "test_end": "2024-03-30 23:54:00+00:00",
+        "n_train": 19440,
+        "n_test": 2160,
+        "rolling_persistence": {
+          "mae": 0.028899537037037033,
+          "rmse": 0.03606675331166425,
+          "r2": 0.9948873592899402,
+          "nse": 0.9948873592899402,
+          "corr": 0.9974436814579403,
+          "mae_skill_vs_rolling_persistence": 0.0,
+          "rmse_skill_vs_rolling_persistence": 0.0
+        },
+        "harmonic_ridge": {
+          "mae": 0.017413250759146643,
+          "rmse": 0.022109519207491463,
+          "r2": 0.9980808926075668,
+          "nse": 0.9980808926075668,
+          "corr": 0.9990415203691868,
+          "mae_skill_vs_rolling_persistence": 0.3961417089201065,
+          "rmse_skill_vs_rolling_persistence": 0.3857634548748148
+        },
+        "grad_boost": {
+          "mae": 0.020466934500239245,
+          "rmse": 0.025772537306743372,
+          "r2": 0.9973923155623466,
+          "nse": 0.9973923155623466,
+          "corr": 0.9986997192986994,
+          "mae_skill_vs_rolling_persistence": 0.2902457868490341,
+          "rmse_skill_vs_rolling_persistence": 0.2839991622685263
+        }
+      }
+    ]
+  }
+}

@@ -54,6 +54,10 @@ _TEMPLATE = """\
     <tr><td>Units</td><td>{units}</td></tr>
     <tr><td>Location (lat, lon)</td><td>{lat}, {lon}</td></tr>
     <tr><td>Total Observations</td><td>{n_obs:,}</td></tr>
+    <tr><td>Threshold Mode</td><td>{threshold_mode}</td></tr>
+    <tr><td>Alert Threshold</td><td>{high_water_threshold}</td></tr>
+    <tr><td>Threshold Source</td><td>{threshold_source}</td></tr>
+    <tr><td>Threshold Reference Range</td><td>{threshold_reference_range}</td></tr>
   </table>
 
   <h2>Water-Level Statistics</h2>
@@ -89,6 +93,9 @@ def generate_report(
     metrics: Dict,
     output_path: Path,
     high_water_threshold: Optional[float] = None,
+    threshold_reference_df: Optional[pd.DataFrame] = None,
+    threshold_mode: str = "train_mean_plus_2std",
+    threshold_source: str = "first_75_percent_reference_window",
 ) -> Path:
     """Generate an HTML report for a single station.
 
@@ -101,8 +108,16 @@ def generate_report(
     output_path : Path
         Where to write the HTML file.
     high_water_threshold : float, optional
-        Water level (m) above which events are flagged. Defaults to
-        mean + 2 std deviations.
+        Water level (m) above which events are flagged. If omitted, defaults
+        to mean + 2 std deviations on the reference window, not the full
+        report window.
+    threshold_reference_df : pd.DataFrame, optional
+        Reference data used to fit the default threshold. If omitted, the
+        first 75% of ``df`` is used as a train/reference window.
+    threshold_mode : str
+        Human-readable threshold mode shown in the report.
+    threshold_source : str
+        Human-readable threshold source shown in the report.
     """
     output_path = Path(output_path)
     station_id = str(df["station_id"].iloc[0])
@@ -118,8 +133,19 @@ def generate_report(
     )
     wl = df["water_level"].dropna()
 
+    if threshold_reference_df is None:
+        n_ref = max(1, int(len(df) * 0.75))
+        threshold_reference_df = df.sort_values("timestamp").iloc[:n_ref].copy()
+    ref_wl = threshold_reference_df["water_level"].dropna()
+    ref_ts = threshold_reference_df["timestamp"]
+    threshold_reference_range = (
+        f"{ref_ts.min().strftime('%Y-%m-%d')} to "
+        f"{ref_ts.max().strftime('%Y-%m-%d')} "
+        f"(n={len(threshold_reference_df):,})"
+    )
+
     if high_water_threshold is None:
-        high_water_threshold = float(wl.mean() + 2 * wl.std())
+        high_water_threshold = float(ref_wl.mean() + 2 * ref_wl.std())
 
     anomalies = df[df["water_level"] >= high_water_threshold].copy()
     if anomalies.empty:
@@ -132,7 +158,8 @@ def generate_report(
         )
         anomaly_html = (
             f"<p>Detected <strong>{len(anomalies)}</strong> high-water events "
-            f"(&ge;&nbsp;{high_water_threshold:.2f}&nbsp;m):</p>"
+            f"(&ge;&nbsp;{high_water_threshold:.2f}&nbsp;m; "
+            f"{threshold_mode}, {threshold_source}):</p>"
             f"<table><tr><th>Timestamp (UTC)</th><th>Water Level (m)</th></tr>"
             f"{rows}</table>"
         )
@@ -174,6 +201,10 @@ def generate_report(
         lat=f"{lat:.4f}",
         lon=f"{lon:.4f}",
         n_obs=len(df),
+        threshold_mode=threshold_mode,
+        high_water_threshold=f"{high_water_threshold:.2f} m",
+        threshold_source=threshold_source,
+        threshold_reference_range=threshold_reference_range,
         wl_mean=f"{wl.mean():.3f}",
         wl_max=f"{wl.max():.3f}",
         wl_min=f"{wl.min():.3f}",

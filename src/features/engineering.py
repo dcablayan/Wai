@@ -104,25 +104,38 @@ def add_rolling_features(
 
 NON_FEATURE_COLS = {
     "timestamp", "station_id", "datum", "units", "lat", "lon", "source",
+    "_source_row",
 }
+
+
+def build_feature_frame(
+    df: pd.DataFrame,
+    target_col: str = "water_level",
+) -> pd.DataFrame:
+    """Build an aligned feature DataFrame from a single-station time series.
+
+    Applies tidal harmonics (8 constituents), temporal covariates
+    (hour-of-day, lunar phase), lag features, and rolling statistics,
+    then drops rows with any NaN from the lag computation. The returned frame
+    keeps ``timestamp``, the target column, and ``_source_row`` so callers can
+    align predictions, observations, and plot timestamps without rebuilding the
+    feature matrix on sliced data.
+    """
+    df = df.copy().sort_values("timestamp").reset_index(drop=True)
+    df["_source_row"] = np.arange(len(df), dtype=int)
+    df = add_tidal_harmonics(df)
+    df = add_temporal_covariates(df)
+    df = add_lag_features(df)
+    df = add_rolling_features(df)
+    return df.dropna().reset_index(drop=True)
 
 
 def build_feature_matrix(
     df: pd.DataFrame,
     target_col: str = "water_level",
 ) -> Tuple[pd.DataFrame, pd.Series]:
-    """Build (X, y) from a single-station time series.
-
-    Applies tidal harmonics (8 constituents), temporal covariates
-    (hour-of-day, lunar phase), lag features, and rolling statistics,
-    then drops rows with any NaN from the lag computation.
-    """
-    df = df.copy().sort_values("timestamp").reset_index(drop=True)
-    df = add_tidal_harmonics(df)
-    df = add_temporal_covariates(df)
-    df = add_lag_features(df)
-    df = add_rolling_features(df)
-    df = df.dropna().reset_index(drop=True)
+    """Build (X, y) from a single-station time series."""
+    df = build_feature_frame(df, target_col=target_col)
 
     feature_cols = [
         c for c in df.columns

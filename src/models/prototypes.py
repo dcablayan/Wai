@@ -2,9 +2,8 @@
 
 Ported from dcablayan/tideformer (prototypes.py) with minor adaptations:
   - Attribution comments added
-  - Unused architectures (TidalTransformer, CoastalGNN, HybridVAE,
-    NeuroHarmonic, TideFoundation) omitted; originals remain in source repo
-  - TinyTidePrototype retained as the best-performing benchmark model
+  - Unused experimental architectures omitted; originals remain in source repo
+  - TinyTidePrototype retained as a lightweight benchmark model
   - No external dependencies — stdlib + math only
 
 All prototypes share the same window-dict interface:
@@ -61,7 +60,6 @@ def lunar_phase(time_hours: float) -> float:
 class TinyTidePrototype:
     """Two-layer MLP-style forecaster with tidal covariates and skip connection.
 
-    Best performer in the dcablayan/tideformer benchmark (mean RMSE 0.222).
     Features hour-of-day and lunar-phase covariates plus a direct skip from
     the last observation. Trains via lightweight gradient descent.
     """
@@ -180,10 +178,9 @@ class HarmonicNetPrototype:
 class WaveGRUPrototype:
     """Bidirectional double-exponential smoothing with attention-like weighting.
 
-    Emulates bidirectional GRU gating by combining forward and backward EMA
-    passes.  A lightweight attention mechanism upweights steps with larger
-    residual energy.  Second-best performer in the tideformer benchmark
-    (mean RMSE 0.911).
+    This is a smoothing heuristic, not a real GRU and not a deep-learning
+    model. It combines forward and backward EMA passes with a lightweight
+    weighting mechanism that upweights larger local residual energy.
     """
 
     def __init__(self, lookback: int):
@@ -243,11 +240,11 @@ class WaveGRUPrototype:
 # ── SurgeNetPrototype ─────────────────────────────────────────────────────────
 
 class SurgeNetPrototype:
-    """Dual-head tide + surge estimator.
+    """Residual heuristic around a harmonic tide estimate.
 
-    Uses HarmonicNetPrototype as the tide head and estimates surge magnitude
-    from the harmonic residual.  External values (e.g. NOAA wind/pressure
-    proxy) can be passed in each window dict as "external_values".
+    Uses HarmonicNetPrototype as the tide head and estimates a residual
+    magnitude from harmonic error. This is not meteorological surge modeling.
+    External values can be passed in each window dict as "external_values".
 
     Returns (prediction, surge_magnitude) from predict().
     """
@@ -285,10 +282,11 @@ class SurgeNetPrototype:
 # ── TsunamiSentinelPrototype ──────────────────────────────────────────────────
 
 class TsunamiSentinelPrototype:
-    """High-pass multi-scale anomaly detector for rapid water-level spikes.
+    """High-pass multi-scale anomaly toy for rapid water-level spikes.
 
     Computes residual energy relative to a local rolling baseline across
     multiple scales and flags windows exceeding a learned energy threshold.
+    This is not a validated tsunami detector.
 
     Returns (next_value_prediction, tsunami_flag) from predict().
     """
