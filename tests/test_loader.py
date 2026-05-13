@@ -1,5 +1,6 @@
 """Tests for src/data/loader.py."""
 
+import warnings
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -129,3 +130,59 @@ def test_load_noaa_predictions_mocked():
     assert df["source"].iloc[0] == "NOAA_PREDICTIONS"
     for col in REQUIRED_COLUMNS:
         assert col in df.columns
+
+
+# ── predictions-key response fixture (CO-OPS predictions product) ─────────────
+
+def _make_noaa_predictions_payload(station_id: str = "9414290", n: int = 5) -> dict:
+    """Payload where records live under 'predictions' key (not 'data')."""
+    records = [
+        {
+            "t": f"2024-01-{1 + i // 240:02d} {(i * 6 // 60) % 24:02d}:{(i * 6) % 60:02d}",
+            "v": f"{0.5 + i * 0.01:.4f}",
+        }
+        for i in range(n)
+    ]
+    return {
+        "metadata": {"lat": "37.806", "lon": "-122.465"},
+        "predictions": records,  # <-- CO-OPS predictions product uses this key
+    }
+
+
+def test_parse_noaa_response_predictions_key():
+    """_parse_noaa_response must handle records under 'predictions' key."""
+    payload = _make_noaa_predictions_payload()
+    df = _parse_noaa_response(payload, "9414290", "MLLW", "metric")
+    assert len(df) == 5
+    for col in REQUIRED_COLUMNS:
+        assert col in df.columns
+
+
+def test_parse_noaa_response_predictions_key_no_data_key():
+    """Payload with 'predictions' key but no 'data' key must still parse."""
+    payload = _make_noaa_predictions_payload()
+    assert "data" not in payload, "Fixture should not have 'data' key"
+    df = _parse_noaa_response(payload, "9414290", "MLLW", "metric")
+    assert len(df) > 0
+
+
+def test_parse_noaa_response_empty_both_keys_raises():
+    """Payload with empty 'data' and empty 'predictions' must raise ValueError."""
+    payload = {"metadata": {}, "data": [], "predictions": []}
+    with pytest.raises(ValueError, match="no data"):
+        _parse_noaa_response(payload, "9414290", "MLLW", "metric")
+
+
+def test_parse_noaa_response_datum_mismatch_warns():
+    """Datum mismatch between request and response metadata should emit a warning."""
+    payload = {
+        "metadata": {"lat": "37.806", "lon": "-122.465", "datum": "NAVD"},
+        "data": [{"t": "2024-01-01 00:00", "v": "1.234"}],
+    }
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        _parse_noaa_response(payload, "9414290", "MLLW", "metric")
+    texts = [str(w.message) for w in caught]
+    assert any("datum" in t.lower() for t in texts), (
+        "Expected a datum-mismatch warning but got none"
+    )

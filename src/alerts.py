@@ -6,21 +6,29 @@ Three configurable threshold modes
 'absolute'   fixed water-level value in the same units as the series
 'percentile' p-th percentile of a reference distribution (default p=95)
 
+Threshold fitting
+-----------------
+Always pass a *reference_series* (e.g. the training split) to fit the threshold
+statistics.  Fitting on the currently displayed/filtered range produces a
+threshold that tracks the display window rather than the climatological baseline.
+
 Usage
 -----
-    from src.alerts import AlertConfig, detect_alerts, generate_alert_summary
+    from src.alerts import AlertConfig, detect_alerts, group_alert_episodes
 
     config = AlertConfig(mode="std", k=2.0)
-    alert_df = detect_alerts(df, config)
-    summary = generate_alert_summary(df, config, station_id="DEMO-HNL")
+    alert_df = detect_alerts(df, config, reference_series=train["water_level"])
+    episodes = group_alert_episodes(alert_df, threshold=config_threshold)
+    summary = generate_alert_summary(df, config, station_id="DEMO-HNL",
+                                     reference_series=train["water_level"])
 """
 
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Optional
+from typing import List, Literal, Optional
 
 import numpy as np
 import pandas as pd
@@ -74,8 +82,10 @@ def detect_alerts(
     value_col : str
         Column name for water-level values.
     reference_series : pd.Series, optional
-        Series used to fit the threshold statistics (e.g., training data).
-        If None, the threshold is computed from df[value_col].
+        Series used to fit the threshold statistics (training data recommended).
+        If None, the threshold is computed from df[value_col] — this conflates
+        the reference distribution with the evaluation window and should be
+        avoided for production use.
 
     Returns
     -------
@@ -87,6 +97,87 @@ def detect_alerts(
     alerts["threshold"] = threshold
     alerts["alert_mode"] = config.mode
     return alerts
+
+
+def group_alert_episodes(
+    alerts_df: pd.DataFrame,
+    threshold: float,
+    value_col: str = "water_level",
+    timestamp_col: str = "timestamp",
+    gap_steps: int = 1,
+) -> List[dict]:
+    """Group consecutive alert rows into episodes.
+
+    Two alert rows are considered part of the same episode if they are
+    separated by at most *gap_steps* missing rows in the original index.
+    This converts sample-level exceedances into contiguous high-water events.
+
+    Parameters
+    ----------
+    alerts_df : pd.DataFrame
+        Output of detect_alerts — rows where water_level >= threshold.
+    threshold : float
+        The threshold value used to detect alerts (stored in each episode dict).
+    value_col : str
+        Column carrying water-level values.
+    timestamp_col : str
+        Column carrying timestamps (optional; episodes include it when present).
+    gap_steps : int
+        Maximum gap in integer index positions between two rows that are still
+        considered the same episode.  Default = 1 (consecutive rows only).
+
+    Returns
+    -------
+    List of episode dicts, each with:
+        start           — timestamp or row index of first alert sample
+        end             — timestamp or row index of last alert sample
+        duration_steps  — number of contiguous alert samples
+        peak            — maximum water_level value in the episode
+        exceedance_m    — peak minus threshold (in the same units as water_level)
+    """
+    if alerts_df.empty:
+        return []
+
+    df = alerts_df.reset_index(drop=False).copy()
+    if "index" not in df.columns:
+        df["_row"] = np.arange(len(df))
+        idx_col = "_row"
+    else:
+        idx_col = "index"
+
+    episodes: List[dict] = []
+    group_rows = [df.iloc[0]]
+
+    for i in range(1, len(df)):
+        prev_idx = group_rows[-1][idx_col]
+        curr_idx = df.iloc[i][idx_col]
+        if curr_idx - prev_idx <= gap_steps:
+            group_rows.append(df.iloc[i])
+        else:
+            episodes.append(_episode_from_rows(group_rows, threshold, value_col, timestamp_col))
+            group_rows = [df.iloc[i]]
+
+    episodes.append(_episode_from_rows(group_rows, threshold, value_col, timestamp_col))
+    return episodes
+
+
+def _episode_from_rows(rows: list, threshold: float, value_col: str, timestamp_col: str) -> dict:
+    values = [float(r[value_col]) for r in rows]
+    peak = max(values)
+
+    def _fmt_ts(r):
+        ts = r.get(timestamp_col)
+        if ts is not None and pd.notna(ts) and hasattr(ts, "strftime"):
+            return ts.strftime("%Y-%m-%d %H:%M UTC")
+        return str(ts) if ts is not None else "—"
+
+    return {
+        "start": _fmt_ts(rows[0]),
+        "end": _fmt_ts(rows[-1]),
+        "duration_steps": len(rows),
+        "peak": round(peak, 4),
+        "exceedance_m": round(peak - threshold, 4),
+    }
 
 
 def generate_alert_summary(
@@ -105,28 +196,18 @@ def generate_alert_summary(
     station_id : str
     value_col : str
     reference_series : pd.Series, optional
+        Strongly recommended: pass the training split so the threshold is fit
+        on historical/climatological data, not the currently displayed range.
 
     Returns
     -------
     dict with keys: station_id, alert_mode, threshold, n_total_obs,
-    n_alerts, alert_rate_pct, events (list of dicts).
+    n_alerts, n_episodes, alert_rate_pct, episodes (list of episode dicts).
     """
     ref = reference_series if reference_series is not None else df[value_col]
     threshold = compute_threshold(ref, config)
     alerts = detect_alerts(df, config, value_col, reference_series)
-
-    events = []
-    for _, row in alerts.head(50).iterrows():
-        ts = row.get("timestamp")
-        if pd.notna(ts) and hasattr(ts, "strftime"):
-            ts_str = ts.strftime("%Y-%m-%d %H:%M UTC")
-        else:
-            ts_str = str(ts) if ts is not None else "—"
-        events.append({
-            "timestamp": ts_str,
-            "value": round(float(row[value_col]), 4),
-            "threshold": round(float(threshold), 4),
-        })
+    episodes = group_alert_episodes(alerts, threshold=threshold, value_col=value_col)
 
     return {
         "station_id": station_id,
@@ -134,8 +215,9 @@ def generate_alert_summary(
         "threshold": round(float(threshold), 4),
         "n_total_obs": int(len(df)),
         "n_alerts": int(len(alerts)),
+        "n_episodes": int(len(episodes)),
         "alert_rate_pct": round(100.0 * len(alerts) / max(len(df), 1), 2),
-        "events": events,
+        "episodes": episodes[:50],
     }
 
 

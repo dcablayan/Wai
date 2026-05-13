@@ -96,7 +96,11 @@ def build_horizon_features(
     df = add_temporal_covariates(df)
     df = add_lag_features(df)
     df = add_rolling_features(df)
-    df = df.dropna().reset_index(drop=True)
+    # Preserve original row index — do NOT reset after dropna.
+    # The caller splits by `X.index < n_train` where n_train is computed on the
+    # pre-dropna DataFrame; resetting here would shift the boundary and leak
+    # training-period rows into the test set.
+    df = df.dropna()
 
     exclude = set(NON_FEATURE_COLS) | {target_col, "_target_h"}
     feature_cols = [c for c in df.columns if c not in exclude]

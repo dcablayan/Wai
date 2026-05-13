@@ -1,8 +1,9 @@
 # Wai — Coastal Water-Level Forecasting
 
-> End-to-end time-series pipeline for ingesting, validating, modeling, and
-> visualizing coastal water-level data — built with NOAA CO-OPS awareness and
-> a reproducible demo dataset.
+> **Research Demo — Not an Operational System.**
+> Wai is a portfolio-grade research demonstration of a coastal water-level
+> forecasting pipeline. It is not a deployed, operational flood-warning product.
+> See [docs/model_card.md](docs/model_card.md) for full limitations and scope.
 
 ![CI](https://github.com/dcablayan/Wai/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
@@ -69,25 +70,30 @@ present anywhere in this repository.
 | Capability | Details |
 |-----------|---------|
 | Demo data loader | Reproducible synthetic dataset (2 stations, 90 days, 6-min cadence) |
-| NOAA CO-OPS loader | Live ingestion of observations and tidal predictions (no API key required) |
+| NOAA CO-OPS loader | Live ingestion of observations and tidal predictions (no API key required); supports `data` + `predictions` response keys |
 | Tidecast reference data | NOAA-derived tidal predictions for 10 coastal stations (Hawaii) |
 | Data validation | NaN, gap, duplicate, out-of-range, and timezone checks |
-| Tidal feature engineering | 8-constituent sin/cos (M2/S2/K1/O1/N2/M4/M6/Mm) + temporal covariates + lags + rolling windows |
+| Tidal feature engineering | 8-constituent sin/cos (M2/S2/K1/O1/N2/M4/M6/Mm) + temporal covariates + lags + rolling windows (shift(1) to avoid leakage) |
 | Windowing utilities | Sliding-window builder and temporal train/val/test splits for prototype models |
-| Persistence baseline | Last-value naive baseline |
+| Persistence baseline | Rolling 1-step naive baseline (primary) + constant holdout (reference) |
 | Harmonic Ridge model | Ridge-regularised linear regression over 8 tidal constituents + temporal covariates |
 | Gradient boosting baseline | HistGradientBoostingRegressor over the same feature matrix (non-linear baseline, scikit-learn only) |
 | WaveGRU adapter | DataFrame API wrapper for WaveGRUPrototype (bidirectional smoothing) |
 | Prototype benchmark models | TinyTide, HarmonicNet, WaveGRU, SurgeNet, TsunamiSentinel — pure-Python research prototypes |
-| Multi-horizon evaluation | Direct forecasting at 1 step (6 min), 6 h, 12 h, 24 h horizons |
+| Multi-horizon evaluation | Direct forecasting at 1 step (6 min), 6 h, 12 h, 24 h horizons; original-index split prevents boundary leakage |
+| Ablation study | HarmonicRidge under 5 feature configurations: harmonics-only, lags-only, rolling-only, harmonics+lags, full |
+| Bootstrap confidence intervals | 1000-replicate percentile bootstrap on MAE/RMSE for all supervised models |
 | Conformal uncertainty intervals | Split-conformal prediction intervals (distribution-free, 90% nominal coverage) |
-| High-water alert detection | Configurable thresholds: mean + k·std, absolute value, or percentile |
+| High-water alert detection | Configurable thresholds: mean + k·std, absolute, percentile; grouped into episodes (start/end/peak/exceedance) |
+| Event metrics | Threshold precision/recall/F1, peak error on event steps, side-of-threshold agreement |
+| NOAA public evaluation | 5-station real-observation evaluation: temporal, event/storm-period holdout; offline mock mode for CI |
+| Model artifact saving | Fitted models pickled to `reports/models/` with run metadata (git SHA, data hash, train dates) |
 | Spatial interpolation | Inverse-distance weighting across stations with lat/lon coordinates |
 | Metrics | MAE, RMSE, R², NSE, Pearson correlation |
 | Streamlit dashboard | Tabbed UI: Overview · Forecasts · Model Comparison · Alerts · Uncertainty · Benchmark |
 | HTML report generation | Per-station report with stats, metrics, anomaly table, alert summary |
 | Benchmark reports | Prototype model RMSE across tidecast stations |
-| CI pipeline | GitHub Actions tests on Python 3.10 + 3.11 |
+| CI pipeline | GitHub Actions tests on Python 3.10 + 3.11 + 3.12 with coverage reporting |
 
 Advanced deep learning (LSTM, Transformer) and meteorological surge modeling (NWS/GFS covariates)
 are intentionally excluded to keep the repo lightweight, dependency-free, and honest about scope.
@@ -113,11 +119,11 @@ cd Wai
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# 2. Run the full demo pipeline (data → train → report → benchmark)
+# 2. Run the full demo pipeline (data → train + ablation → report → benchmark → horizons → NOAA offline)
 make demo
 
-# 3. Evaluate multi-horizon forecast skill
-python -m scripts.evaluate_horizons
+# 3. Evaluate on real NOAA CO-OPS observations (requires internet)
+python -m scripts.evaluate_noaa_public
 
 # 4. Run the test suite
 make test
@@ -130,10 +136,13 @@ Open `http://localhost:8501` to explore the dashboard.
 
 Or run individual steps:
 ```bash
-python -m scripts.prepare_demo_data   # synthetic demo data
-python -m scripts.train_baseline      # train + evaluate all models
-python -m scripts.run_benchmark       # benchmark prototypes on tidecast data
-python -m scripts.generate_report     # HTML station reports
+python -m scripts.prepare_demo_data       # synthetic demo data
+python -m scripts.train_baseline          # train + ablation + metrics + artifacts
+python -m scripts.evaluate_horizons       # multi-horizon evaluation (1-step, 6h, 12h, 24h)
+python -m scripts.run_benchmark           # benchmark prototypes on tidecast data
+python -m scripts.generate_report         # HTML station reports
+NOAA_OFFLINE=1 python -m scripts.evaluate_noaa_public  # NOAA eval (offline/mock)
+python -m scripts.evaluate_noaa_public    # NOAA eval (live fetch, 5 stations)
 ```
 
 ---
@@ -325,6 +334,10 @@ dashboard, and documentation. The single source of truth is
 
 ## Known Limitations
 
+> **This is a research demo, not an operational flood-warning system.**
+> See [`docs/model_card.md`](docs/model_card.md) for full scope, failure modes,
+> and the scientific hypotheses tested.
+
 - All pipeline results are on **synthetic data** and cannot be compared to
   published operational benchmarks.
 - Tidecast benchmark metrics are on **NOAA-derived tidal predictions** (smooth,
@@ -334,12 +347,14 @@ dashboard, and documentation. The single source of truth is
   math only); they are not production neural networks despite their names.
 - No meteorological forcing (wind, pressure) is incorporated; storm surge
   cannot be predicted from first principles.
+- Rolling features are computed on `shift(1)` to prevent target leakage; this
+  means the rolling window at time t covers [t-w, t-1], not [t-w+1, t].
+- Conformal intervals assume exchangeability; tidal series are non-stationary,
+  so empirical coverage may fall below the nominal level.
 - NOAA API requests are limited to 31-day windows per call; longer time series
   require multiple requests.
 - No hyperparameter tuning is performed; default parameters are reasonable
   starting points, not optimised values.
-- Conformal intervals assume exchangeability; tidal series are non-stationary,
-  so empirical coverage may fall below the nominal level.
 - IDW spatial interpolation is a simple deterministic method with no
   uncertainty quantification.
 - Advanced deep learning (LSTM, Transformer) and meteorological surge modeling
@@ -347,20 +362,22 @@ dashboard, and documentation. The single source of truth is
   and honest about scope.
 
 See [`docs/metrics_interpretation.md`](docs/metrics_interpretation.md) for
-a full discussion of how to interpret reported numbers.
+guidance on interpreting reported numbers, and [`docs/model_card.md`](docs/model_card.md)
+for a complete model card.
 
 ---
 
 ## Resume Bullet
 
-> Built **Wai**, a reproducible coastal water-level forecasting pipeline;
-> implemented 8-constituent tidal harmonic feature engineering over NOAA
-> CO-OPS data, trained four models (Persistence, HarmonicRidge, GradBoost,
-> WaveGRU) with multi-horizon evaluation (6 min–24 h), added split-conformal
-> prediction intervals, high-water alert detection, and inverse-distance
-> spatial interpolation — all backed by 110 passing tests, an interactive
-> Streamlit dashboard, automated HTML reports, and CI, with zero private data
-> exposure.
+> Built **Wai**, a scientifically defensible coastal water-level forecasting research demo;
+> implemented 8-constituent tidal harmonic feature engineering (with target-leakage
+> controls verified by automated tests), trained and ablated four models
+> (Persistence, HarmonicRidge, GradBoost, WaveGRU) with multi-horizon evaluation
+> (6 min–24 h), bootstrap confidence intervals, event-level threshold metrics,
+> alert episode grouping, split-conformal prediction intervals, and NOAA public
+> station evaluation — all backed by 160+ passing tests, model artifact saving with
+> run metadata (git SHA + data hash), an interactive Streamlit dashboard, automated
+> HTML reports, and CI on Python 3.10–3.12, with zero private data exposure.
 
 ---
 

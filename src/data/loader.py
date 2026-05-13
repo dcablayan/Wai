@@ -80,13 +80,25 @@ def _parse_noaa_response(
     units: str,
     source_label: str = "NOAA_COOPS",
 ) -> pd.DataFrame:
-    """Parse a NOAA CO-OPS JSON payload into a Wai-schema DataFrame."""
-    if "error" in payload:
-        raise ValueError(f"NOAA API error: {payload['error']['message']}")
+    """Parse a NOAA CO-OPS JSON payload into a Wai-schema DataFrame.
 
-    records = payload.get("data", [])
+    Supports both ``data`` (observations/water_level product) and
+    ``predictions`` (predictions product) as the records key.  Raises
+    informative errors for API-reported errors or missing records.
+    """
+    if "error" in payload:
+        msg = payload["error"].get("message", str(payload["error"]))
+        raise ValueError(f"NOAA API error: {msg}")
+
+    # The CO-OPS API uses "data" for observations and "predictions" for the
+    # predictions product.  Accept either key so the loader is product-agnostic.
+    records = payload.get("data") or payload.get("predictions") or []
     if not records:
         raise ValueError(f"NOAA API returned no data for station {station_id}")
+
+    # Warn on potential datum/unit mismatches embedded in the metadata
+    meta = payload.get("metadata", {})
+    _check_noaa_metadata(meta, datum, units, station_id)
 
     df = pd.DataFrame(records)
     df = df.rename(columns={"t": "timestamp", "v": "water_level"})
@@ -97,11 +109,38 @@ def _parse_noaa_response(
     df["units"] = "m" if units == "metric" else "ft"
     df["source"] = source_label
 
-    meta = payload.get("metadata", {})
     df["lat"] = float(meta.get("lat", float("nan")))
     df["lon"] = float(meta.get("lon", float("nan")))
 
     return df[REQUIRED_COLUMNS]
+
+
+def _check_noaa_metadata(
+    meta: dict,
+    requested_datum: str,
+    requested_units: str,
+    station_id: str,
+) -> None:
+    """Emit warnings when the API response metadata suggests a mismatch."""
+    import warnings
+
+    api_datum = meta.get("datum", "")
+    if api_datum and api_datum.upper() != requested_datum.upper():
+        warnings.warn(
+            f"NOAA station {station_id}: requested datum={requested_datum!r} but "
+            f"response metadata reports datum={api_datum!r}. Values may be on a "
+            "different vertical reference — verify before use.",
+            stacklevel=4,
+        )
+
+    api_units = meta.get("units", "")
+    expected_units = "metric" if requested_units == "metric" else "english"
+    if api_units and api_units.lower() not in (expected_units, requested_units.lower()):
+        warnings.warn(
+            f"NOAA station {station_id}: requested units={requested_units!r} but "
+            f"response metadata reports units={api_units!r}. Check unit conversion.",
+            stacklevel=4,
+        )
 
 
 def load_noaa_data(

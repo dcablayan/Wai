@@ -14,6 +14,7 @@ from src.alerts import (
     compute_threshold,
     detect_alerts,
     generate_alert_summary,
+    group_alert_episodes,
     save_alert_summary,
 )
 
@@ -119,7 +120,7 @@ def test_alert_summary_keys():
     config = AlertConfig(mode="std", k=2.0)
     summary = generate_alert_summary(df, config, station_id="TEST")
     for key in ("station_id", "alert_mode", "threshold", "n_total_obs", "n_alerts",
-                "alert_rate_pct", "events"):
+                "n_episodes", "alert_rate_pct", "episodes"):
         assert key in summary, f"Missing key: {key}"
 
 
@@ -151,3 +152,86 @@ def test_save_alert_summary_creates_file():
         assert out.exists()
         loaded = json.loads(out.read_text())
         assert loaded["station_id"] == "TEST"
+
+
+# ── group_alert_episodes ──────────────────────────────────────────────────────
+
+def _alerts_from_mask(wl: np.ndarray, threshold: float) -> pd.DataFrame:
+    """Build a minimal alerts DataFrame from a boolean mask."""
+    n = len(wl)
+    timestamps = pd.date_range("2024-01-01", periods=n, freq="6min", tz="UTC")
+    df = pd.DataFrame({
+        "timestamp": timestamps,
+        "water_level": wl,
+        "station_id": "TEST",
+        "threshold": threshold,
+        "alert_mode": "absolute",
+    })
+    return df[wl >= threshold].copy()
+
+
+def test_group_alert_episodes_empty_returns_empty():
+    empty = pd.DataFrame(columns=["timestamp", "water_level", "threshold"])
+    episodes = group_alert_episodes(empty, threshold=0.8)
+    assert episodes == []
+
+
+def test_group_alert_episodes_single_episode():
+    """Consecutive alert rows should collapse into one episode."""
+    wl = np.array([0.1, 0.1, 1.0, 1.0, 1.0, 0.1, 0.1])  # 3 consecutive alerts
+    threshold = 0.5
+    alerts = _alerts_from_mask(wl, threshold)
+    episodes = group_alert_episodes(alerts, threshold=threshold)
+    assert len(episodes) == 1
+    assert episodes[0]["duration_steps"] == 3
+
+
+def test_group_alert_episodes_two_separate_episodes():
+    """Non-consecutive alert blocks should become separate episodes."""
+    wl = np.array([0.1, 1.0, 1.0, 0.1, 0.1, 1.0, 0.1])  # gap of 2 between episodes
+    threshold = 0.5
+    alerts = _alerts_from_mask(wl, threshold)
+    episodes = group_alert_episodes(alerts, threshold=threshold)
+    assert len(episodes) == 2
+
+
+def test_group_alert_episodes_peak_is_max():
+    """Peak in each episode must equal the maximum water level in that episode."""
+    wl = np.array([0.1, 1.2, 1.5, 1.1, 0.1])
+    threshold = 0.5
+    alerts = _alerts_from_mask(wl, threshold)
+    episodes = group_alert_episodes(alerts, threshold=threshold)
+    assert len(episodes) == 1
+    assert episodes[0]["peak"] == pytest.approx(1.5, abs=1e-4)
+
+
+def test_group_alert_episodes_exceedance_is_peak_minus_threshold():
+    """exceedance_m must be peak - threshold."""
+    wl = np.array([0.1, 1.5, 0.1])
+    threshold = 0.8
+    alerts = _alerts_from_mask(wl, threshold)
+    episodes = group_alert_episodes(alerts, threshold=threshold)
+    assert len(episodes) == 1
+    assert episodes[0]["exceedance_m"] == pytest.approx(1.5 - 0.8, abs=1e-4)
+
+
+def test_group_alert_episodes_episode_keys():
+    """Each episode must have required keys."""
+    wl = np.array([0.1, 1.0, 0.1])
+    threshold = 0.5
+    alerts = _alerts_from_mask(wl, threshold)
+    episodes = group_alert_episodes(alerts, threshold=threshold)
+    for ep in episodes:
+        for key in ("start", "end", "duration_steps", "peak", "exceedance_m"):
+            assert key in ep, f"Missing episode key: {key}"
+
+
+def test_alert_summary_n_episodes_matches_grouped():
+    """n_episodes in summary must equal len(group_alert_episodes(...))."""
+    df = _synthetic_df(n=500)
+    config = AlertConfig(mode="std", k=2.0)
+    summary = generate_alert_summary(df, config, station_id="TEST")
+    alerts = detect_alerts(df, config)
+    threshold = compute_threshold(df["water_level"], config)
+    episodes = group_alert_episodes(alerts, threshold=threshold)
+    assert summary["n_episodes"] == len(episodes)
