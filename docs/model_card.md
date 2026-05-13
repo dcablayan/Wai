@@ -1,193 +1,120 @@
-# Model Card — Wai Coastal Water-Level Forecasting
+# Model Card - Wai Hybrid Water-Level Prediction
 
-> **Status: Research Demo — Not an Operational System**
->
-> Wai is a portfolio-grade research demonstration. It is not a deployed,
-> validated operational flood-warning system and must not be used to make
-> emergency-management, evacuation, or infrastructure decisions.
-
----
+> **Status: research/product demo. Not operational.**
+> Wai must not be used for emergency management, flood warnings, evacuation
+> decisions, insurance, or infrastructure risk decisions.
 
 ## Model Details
 
 | Field | Value |
-|-------|-------|
+| --- | --- |
 | Version | 0.1.0 |
-| Authors | Dylan Cablayan |
-| Type | Supervised regression (Ridge, HistGradientBoosting) + rule-based prototype models |
-| Task | Multi-step-ahead coastal water-level forecasting |
-| Horizons | 1 step (6 min), 6 h, 12 h, 24 h |
-| Inputs | Tidal harmonic sin/cos features (8 constituents), temporal covariates, lag observations, rolling statistics |
-| Outputs | Predicted water level (metres, MLLW datum) + optional conformal prediction intervals |
-
----
+| Task | Short-term station-level water-level regression |
+| Hybrid definition | Physics-informed tidal structure plus statistical/ML residual learning |
+| Main inputs | UTC timestamps, tidal harmonics, lagged observations, rolling statistics, optional NOAA tidal prediction baseline |
+| Main outputs | Water-level point forecasts and split-conformal intervals |
+| Dependencies | numpy, pandas, scikit-learn, statsmodels, Streamlit/Plotly for dashboard |
+| Explicitly excluded | Heavy deep-learning dependencies, real-time operations, meteorological surge forcing |
 
 ## Intended Use
 
-**In scope:**
-- Portfolio demonstration of an end-to-end time-series forecasting pipeline
-- Reproducing the feature engineering, evaluation, and reporting methodology described in the codebase
-- Learning resource for tidal harmonic modelling and conformal uncertainty quantification
-- Research baseline for comparing harmonic regression to more complex architectures
+In scope:
 
-**Out of scope:**
-- Real-time operational flood forecasting or emergency alerts
-- Insurance underwriting or infrastructure risk assessment
-- Replacing or supplementing official NOAA products (CO-OPS tidal predictions, NWS storm-surge forecasts)
-- Any context where model errors could cause harm
+- College-level research/product demo of reproducible coastal time-series
+  evaluation.
+- Testing whether tidal structure plus residual learning improves over rolling
+  persistence and NOAA tidal prediction baselines.
+- Demonstrating leakage controls, temporal splits, uncertainty reporting, and
+  threshold-event metrics.
 
----
+Out of scope:
 
-## Scientific Hypotheses
+- Operational forecasting or alerting.
+- Validated storm-surge, wave, tsunami, or emergency detection.
+- Replacement or supplement for NOAA CO-OPS predictions or NWS products.
 
-The following claims are testable within this codebase and constitute the scientific contribution:
+## Scientific Questions
 
-1. **Tidal harmonics dominate predictable variance.** Eight-constituent harmonic features (M2, S2, K1, O1, N2, M4, M6, Mm) alone account for ≥ 98% of R² on the synthetic demo series. *(Supported by ablation study — see below.)*
+The current codebase evaluates these questions:
 
-2. **Adding lag and rolling features provides incremental improvement over harmonics alone.** The full feature set (harmonics + lags + rolling) achieves marginally lower MAE than harmonics-only. *(Supported by ablation study.)*
+1. Do tidal harmonic features plus lag/rolling statistics improve over rolling
+   persistence on synthetic sanity-check data?
+2. On public NOAA observations, does any learned residual method improve over
+   the NOAA tidal prediction baseline?
+3. Do rolling-origin folds tell the same story as a single 75/25 temporal
+   holdout?
+4. Do conformal intervals achieve their nominal coverage on future test
+   windows, and how does coverage differ on event vs non-event samples?
 
-3. **Rolling 1-step persistence is the correct 6-minute naive baseline.** Constant holdout persistence degrades rapidly at longer horizons and artificially inflates the apparent advantage of learned models. *(Supported by the two-variant persistence comparison in `model_metrics.json`.)*
+Claims are generated from current report artifacts. In particular, the model
+card does **not** claim that harmonics-only achieves at least 98% R2 on every
+station; `reports/ablation_metrics.json` has shown that this is not always
+true. See `reports/summary.json -> synthetic -> ablation_claims` for the
+computed current statement.
 
-4. **Direct multi-horizon forecasting avoids compounding error.** Training a separate model per horizon is a principled alternative to iterated (recursive) prediction. *(Evaluated in `horizon_metrics.json`.)*
+## Data
 
-5. **Split-conformal intervals achieve ≥ 90% empirical coverage on the in-distribution test set.** Coverage may fall below the nominal level when the series is non-stationary or when evaluated on out-of-distribution periods (e.g. storm surge). *(Tested in `test_conformal.py`.)*
+| Dataset | Source | Meaning |
+| --- | --- | --- |
+| `data/demo/demo_water_levels.csv` | Generated by `scripts/prepare_demo_data.py` | Synthetic sanity-check data, not sensor data |
+| `data/demo/tidecast/*.csv` | NOAA-derived tidal predictions | Smooth deterministic tidal signal, not observations |
+| NOAA CO-OPS live API | Public API | Observations and NOAA predictions fetched on demand, not stored |
+| NOAA mock fixtures | Generated in `scripts/evaluate_noaa_public.py` | Offline CI fixtures, never real performance evidence |
 
----
+## Evaluation Protocols
 
-## Ablation Study Results (synthetic demo data)
+- Synthetic single holdout: 75/25 temporal split per station.
+- Synthetic rolling-origin: multiple expanding-window folds with explicit
+  train/test boundaries.
+- NOAA live/mock: observations merged to NOAA predictions by UTC timestamp
+  after datum and unit checks.
+- Conformal: train, calibration, and future test windows are temporally
+  ordered; coverage is reported overall, event, and non-event.
+- Event thresholds: fit on train/reference windows, not on full report windows.
 
-The ablation varies which feature groups are given to HarmonicRidge.
-All results on the temporal holdout (last 25% of data per station).
+NOAA output files are intentionally separate:
 
-Current per-station / per-configuration numbers are **regenerated each run**
-and live in [`reports/ablation_metrics.json`](../reports/ablation_metrics.json)
-plus the rollup at [`reports/summary.json`](../reports/summary.json) — see the
-`ablation` block. README and model card no longer embed these values, so the
-doc never drifts from the artifact.
-
-**Qualitative takeaway** (stable across runs on the synthetic demo data):
-tidal harmonics are the strongest single feature group; lags and rolling
-statistics provide a small but consistent improvement. Rolling features
-alone are the weakest single group, and their benefit over lags is
-station-dependent.
-
----
-
-## Training Data
-
-| Dataset | Source | Status |
-|---------|--------|--------|
-| `data/demo/demo_water_levels.csv` | Fully synthetic (M2/S2/K1/O1 + Gaussian noise + synthetic surge) | **Not real sensor data** |
-| `data/demo/tidecast/*.csv` | NOAA-derived tidal predictions (harmonic model output, not raw observations) | **Not raw sensor data** |
-| NOAA CO-OPS via API | Public, no key required | Real observations — not stored in this repo |
-
-All pipeline metrics reported in `reports/model_metrics.json` and `reports/horizon_metrics.json` are computed on **synthetic demo data**. They are not directly comparable to published operational benchmark results.
-
----
-
-## Evaluation Protocol
-
-### Temporal holdout
-- Split: last 25% of each station's time series (by timestamp)
-- No shuffling; temporal order is preserved
-- Feature lag warm-up rows are excluded from both train and test
-
-### Leakage controls
-- Rolling features are computed on `shift(1)` to exclude `water_level[t]` when predicting `water_level[t]`
-- Horizon features preserve original row indices after `dropna()` to prevent boundary shift
-- Tests in `tests/test_leakage.py` and `tests/test_split_integrity.py` enforce these invariants
-
-### Multi-horizon strategy
-- Direct forecasting: a separate model is trained per horizon
-- Persistence at horizon h: rolling h-step (pred[t] = obs[t-h])
-- WaveGRU is evaluated at 1-step only; iterated prediction is out of scope
-- **Split mask**: training rows use `target_idx = X.index + h < n_train`;
-  test rows use `X.index >= n_train`. Rows whose features sit in the train
-  span but whose targets cross the boundary are excluded from both sets
-  (guarded by `tests/test_horizons.py::test_horizon_train_targets_before_train_cutoff`).
-
-### NOAA real-observation evaluation
-- Run `python -m scripts.evaluate_noaa_public` (or `NOAA_OFFLINE=1 ...` for CI)
-- Temporal holdout on 28-day windows for 5 geographically diverse stations
-- Storm-period holdout for Honolulu (Jan 2024)
-- Live mode **fails hard** if the NOAA fetch errors; `--allow-mock` is required
-  to substitute mock data per-station. Every record carries `data_source`,
-  `mock_used`, `station_id`, `begin_date`, and `end_date` so no metric can be
-  read as "real NOAA" when it was actually synthetic.
-- Results saved to `reports/noaa_public_metrics.json`
-
-### Event-holdout evaluation
-- Run `python -m scripts.evaluate_events`
-- The synthetic generator places a king tide near day 85 and a storm surge
-  near day 80, so they fall inside the test span of the 75 % split.
-- Threshold = train mean + 2 σ — fit on the training window only.
-- Output: per-station episode metrics (precision, recall, F1, peak-height
-  error, peak-time error, lead-time error) in `reports/event_metrics.json`
-  alongside per-sample MAE/RMSE for context.
-
----
+- `reports/noaa_mock_metrics.*`: offline/mock only.
+- `reports/noaa_live_metrics.*`: live only; fails if any record has
+  `mock_used=true`.
+- `reports/noaa_allow_mock_metrics.*`: explicit mixed fallback runs.
 
 ## Metrics
 
-| Metric | Definition | Notes |
-|--------|-----------|-------|
-| MAE | Mean absolute error (m) | Primary metric |
-| RMSE | Root mean squared error (m) | Penalises large errors more |
-| R² | Coefficient of determination | 1 = perfect; negative = worse than mean |
-| NSE | Nash-Sutcliffe efficiency = R² for point forecasts | Hydrology convention |
-| Precision/Recall | Threshold exceedance classification | Event-level; uses training-split threshold |
-| Peak error | Max \|actual - forecast\| on event steps | Operational relevance |
-| Block bootstrap 95% CI | 1000-replicate moving/circular block bootstrap on MAE/RMSE (block length ≈ n^(1/3)) | **Primary** interval; honors residual autocorrelation |
-| IID bootstrap 95% CI | 1000-replicate percentile bootstrap on MAE/RMSE | Reference baseline; always tighter than the block interval |
-| Episode P / R / F1 | Predicted vs observed contiguous threshold-exceedance episodes | Event-level skill |
-| Peak-height error | Mean abs(peak_pred − peak_obs) on matched episodes (m) | Operational extreme skill |
-| Peak-time error | Mean \|t_peak_pred − t_peak_obs\| on matched episodes (s) | Timing accuracy at the peak |
-| Lead-time error | Mean (t_pred_start − t_obs_start), positive = late | Lead/lag of the predicted episode |
-| Stratified conformal coverage | Empirical coverage overall / on event / on non-event | Shows where intervals degrade |
+- MAE and RMSE in source units.
+- R2 / NSE for point forecasts.
+- Skill score vs rolling persistence and vs NOAA prediction:
+  `1 - model_error / baseline_error`.
+- Event precision, recall, F1, peak-height error, peak-time error, and lead
+  time for threshold exceedance episodes.
+- Split-conformal nominal coverage, empirical coverage, event/non-event
+  coverage, qhat, calibration size, and mean interval width.
 
----
+## Known Limitations
 
-## Known Limitations and Failure Modes
+1. Synthetic metrics are sanity checks only.
+2. Tidecast benchmark data is easier than real observations because it is
+   deterministic harmonic output.
+3. NOAA live windows are short and do not establish seasonal or operational
+   robustness.
+4. No wind, pressure, rainfall, waves, or atmospheric forecast inputs are used,
+   so storm surge cannot be predicted from first principles.
+5. `WaveGRUPrototype` is a smoothing heuristic, not a real GRU.
+6. `SurgeNetPrototype` is a residual heuristic, not meteorological surge
+   modeling.
+7. `TsunamiSentinelPrototype` is an anomaly toy, not a validated tsunami
+   detector.
+8. Split-conformal guarantees require exchangeability; empirical coverage is
+   reported because tidal time series can violate that assumption.
 
-1. **Synthetic training data.** All pipeline metrics are on a synthetic series with known tidal structure and Gaussian noise. Real sensor data includes datum uncertainty, communication dropouts, biofouling drift, and unmodelled surge. MAE on real data will be substantially higher.
+## Recommended Reading of Results
 
-2. **No meteorological forcing.** Storm surge (wind stress + inverse barometer) is not modelled. The model cannot predict surge events from first principles — it can only extrapolate the tidal signal.
+Use `reports/summary.json` as the index. Treat the sections separately:
 
-3. **No datum / datum-mismatch handling.** The loader issues a warning when the API response datum differs from the requested datum, but does not automatically convert. Users must ensure consistent datum use.
+- `synthetic`: reproducibility and leakage sanity checks.
+- `tidecast`: prototype behavior on smooth NOAA-derived tidal predictions.
+- `noaa_mock`: CI/offline plumbing check only.
+- `noaa_live`: real public NOAA observation evaluation when generated.
 
-4. **Conformal intervals assume exchangeability.** Tidal series are non-stationary; coverage may fall below 90% nominal during regime changes or storm events.
-
-5. **Prototype model names are misleading.** "ʻAle Piʻi (Rising Wave)" and "Kai Eʻe (Tsunami)" are pure-Python research baselines, not production surge or tsunami detectors. The names are aesthetic choices, not capability claims.
-
-6. **Tidecast benchmark metrics are on smooth data.** NOAA tidal predictions are deterministic harmonic output — inherently easier than real sensor data. Prototype model RMSE on tidecast data cannot be compared to literature results on real observations.
-
-7. **Short evaluation windows.** 28-day NOAA API windows are insufficient to characterise seasonal variability, multi-year climate signals, or rare extreme events.
-
-8. **No spatial generalisation test.** All models are trained and tested at the same station. Station-holdout (train on N-1 stations, test on held-out station) has not been evaluated.
-
----
-
-## Not an Operational System
-
-Wai does not:
-- Issue real-time flood warnings or emergency advisories
-- Connect to live tide-gauge infrastructure
-- Incorporate NWS storm-surge or wave-height forecasts
-- Hold any operational certification (e.g. NOAA Weather-Ready Nation)
-- Replace or supplement NOAA CO-OPS official products
-
-Anyone requiring operational coastal flood forecasts should consult:
-- [NOAA CO-OPS Tidal Predictions](https://tidesandcurrents.noaa.gov/)
-- [NWS Storm Surge Unit](https://www.nhc.noaa.gov/surge/)
-- [NOAA Weather-Ready Nation](https://www.weather.gov/wrn/)
-
----
-
-## Citation
-
-If you reference this work in academic or professional writing, please use:
-
-```
-Cablayan, D. (2026). Wai: A coastal water-level forecasting research demo.
-GitHub: https://github.com/dcablayan/Wai
-```
+Do not combine mock NOAA metrics with live NOAA metrics, and do not present
+mock NOAA metrics as real NOAA performance.

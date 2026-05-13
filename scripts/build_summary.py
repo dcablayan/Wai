@@ -195,6 +195,97 @@ def _event_summary(event_metrics: Optional[dict]) -> Optional[dict]:
     return out
 
 
+def _conformal_summary(conformal_metrics: Optional[dict]) -> Optional[dict]:
+    if not conformal_metrics:
+        return None
+    out = {}
+    for station, rec in conformal_metrics.items():
+        if station.startswith("_") or not isinstance(rec, dict):
+            continue
+        out[station] = rec.get("models", {})
+    return out
+
+
+def _rolling_origin_summary(rolling_metrics: Optional[dict]) -> Optional[dict]:
+    if not rolling_metrics:
+        return None
+    out = {}
+    for station, rec in rolling_metrics.items():
+        if station.startswith("_") or not isinstance(rec, dict):
+            continue
+        out[station] = {
+            "n_folds": rec.get("n_folds"),
+            "folds": [
+                {
+                    "fold": f.get("fold"),
+                    "train_start": f.get("train_start"),
+                    "train_end": f.get("train_end"),
+                    "test_start": f.get("test_start"),
+                    "test_end": f.get("test_end"),
+                    "n_train": f.get("n_train"),
+                    "n_test": f.get("n_test"),
+                    "rolling_persistence_mae": f.get("rolling_persistence", {}).get("mae"),
+                    "harmonic_ridge_mae": f.get("harmonic_ridge", {}).get("mae"),
+                    "grad_boost_mae": f.get("grad_boost", {}).get("mae"),
+                }
+                for f in rec.get("folds", [])
+            ],
+        }
+    return out
+
+
+def _ablation_claims(ablation_metrics: Optional[dict]) -> Optional[dict]:
+    """Generate ablation takeaways from current metrics, never hardcoded prose."""
+    if not ablation_metrics:
+        return None
+    harmonics_r2 = []
+    full_beats_harmonics = []
+    best_by_station = {}
+    for station, configs in ablation_metrics.items():
+        if not isinstance(configs, dict):
+            continue
+        h = configs.get("harmonics_only", {})
+        f = configs.get("full", {})
+        if isinstance(h, dict) and isinstance(h.get("r2"), (int, float)):
+            harmonics_r2.append(float(h["r2"]))
+        if (
+            isinstance(h, dict)
+            and isinstance(f, dict)
+            and isinstance(h.get("mae"), (int, float))
+            and isinstance(f.get("mae"), (int, float))
+        ):
+            full_beats_harmonics.append(float(f["mae"]) < float(h["mae"]))
+        scored = {
+            cfg: m.get("mae")
+            for cfg, m in configs.items()
+            if isinstance(m, dict) and isinstance(m.get("mae"), (int, float))
+        }
+        if scored:
+            best_by_station[station] = min(scored, key=scored.get)
+
+    if not harmonics_r2:
+        return None
+    r2_min = min(harmonics_r2)
+    r2_max = max(harmonics_r2)
+    return {
+        "stations_with_harmonics_only": int(len(harmonics_r2)),
+        "harmonics_only_r2_min": round(r2_min, 6),
+        "harmonics_only_r2_max": round(r2_max, 6),
+        "harmonics_only_all_ge_0_98": bool(all(v >= 0.98 for v in harmonics_r2)),
+        "full_mae_better_than_harmonics_only_all": bool(full_beats_harmonics and all(full_beats_harmonics)),
+        "best_config_by_station": best_by_station,
+        "statement": (
+            "Current synthetic ablation shows harmonics-only R2 ranging from "
+            f"{r2_min:.4f} to {r2_max:.4f}; full features improve MAE over "
+            "harmonics-only for every station."
+            if full_beats_harmonics and all(full_beats_harmonics)
+            else
+            "Current synthetic ablation does not support a blanket claim that "
+            "full features improve MAE over harmonics-only at every station."
+        ),
+    }
+
+
 def _noaa_summary(noaa_metrics: Optional[dict]) -> Optional[dict]:
     if not noaa_metrics:
         return None
@@ -211,8 +302,12 @@ def _noaa_summary(noaa_metrics: Optional[dict]) -> Optional[dict]:
             "end_date": rec.get("end_date"),
             "n_train": rec.get("n_train"),
             "n_test": rec.get("n_test"),
+            "rolling_persistence_mae": rec.get("rolling_persistence", {}).get("mae"),
+            "noaa_prediction_mae": rec.get("noaa_prediction", {}).get("mae"),
+            "noaa_residual_persistence_mae": rec.get("noaa_residual_persistence", {}).get("mae"),
             "harmonic_ridge_mae": rec.get("harmonic_ridge", {}).get("mae"),
             "grad_boost_mae": rec.get("grad_boost", {}).get("mae"),
+            "hybrid_residual_ridge_mae": rec.get("hybrid_residual_ridge", {}).get("mae"),
         }
     return {"meta": meta, "stations": stations}
 
@@ -248,25 +343,43 @@ def _staleness(run_meta: Optional[dict]) -> dict:
 def build_summary() -> dict:
     REPORTS_DIR.mkdir(exist_ok=True)
     run_meta = _read_json(REPORTS_DIR / "run_metadata.json")
+    ablation = _read_json(REPORTS_DIR / "ablation_metrics.json")
     summary = {
         "schema_version": 1,
         "generated_by": "scripts/build_summary.py",
         "run_metadata": run_meta,
         "staleness": _staleness(run_meta),
-        "model_metrics_1step": _flatten_station_metrics(
-            _read_json(REPORTS_DIR / "model_metrics.json")
+        "synthetic": {
+            "model_metrics_1step": _flatten_station_metrics(
+                _read_json(REPORTS_DIR / "model_metrics.json")
+            ),
+            "horizon_metrics": _horizon_summary(
+                _read_json(REPORTS_DIR / "horizon_metrics.json")
+            ),
+            "event_metrics": _event_summary(
+                _read_json(REPORTS_DIR / "event_metrics.json")
+            ),
+            "rolling_origin": _rolling_origin_summary(
+                _read_json(REPORTS_DIR / "rolling_origin_metrics.json")
+            ),
+            "conformal": _conformal_summary(
+                _read_json(REPORTS_DIR / "conformal_metrics.json")
+            ),
+            "ablation": ablation,
+            "ablation_claims": _ablation_claims(ablation),
+        },
+        "tidecast": {
+            "benchmark": _benchmark_table(REPORTS_DIR / "benchmark_results.md"),
+        },
+        "noaa_mock": _noaa_summary(
+            _read_json(REPORTS_DIR / "noaa_mock_metrics.json")
         ),
-        "horizon_metrics": _horizon_summary(
-            _read_json(REPORTS_DIR / "horizon_metrics.json")
+        "noaa_live": _noaa_summary(
+            _read_json(REPORTS_DIR / "noaa_live_metrics.json")
         ),
-        "event_metrics": _event_summary(
-            _read_json(REPORTS_DIR / "event_metrics.json")
+        "noaa_allow_mock": _noaa_summary(
+            _read_json(REPORTS_DIR / "noaa_allow_mock_metrics.json")
         ),
-        "noaa_public": _noaa_summary(
-            _read_json(REPORTS_DIR / "noaa_public_metrics.json")
-        ),
-        "benchmark": _benchmark_table(REPORTS_DIR / "benchmark_results.md"),
-        "ablation": _read_json(REPORTS_DIR / "ablation_metrics.json"),
     }
     return summary
 
@@ -276,9 +389,10 @@ def main() -> None:
     SUMMARY_PATH.write_text(json.dumps(summary, indent=2, default=str))
     print(f"Saved {SUMMARY_PATH}")
 
-    if summary["benchmark"] and summary["benchmark"]["mismatch"]:
+    benchmark = summary["tidecast"].get("benchmark")
+    if benchmark and benchmark["mismatch"]:
         print("\nBenchmark average mismatch detected:")
-        for model, vals in summary["benchmark"]["mismatch"].items():
+        for model, vals in benchmark["mismatch"].items():
             print(f"  {model}: report={vals['in_report']} "
                   f"recomputed={vals['recomputed']}")
 

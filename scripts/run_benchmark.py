@@ -1,10 +1,8 @@
-"""Benchmark all prototype models on tidecast and demo data.
+"""Benchmark all prototype models on tidecast data.
 
-Runs TinyTide, HarmonicNet, WaveGRU, and SurgeNet across every station
+Runs persistence, TinyTide, HarmonicNet, WaveGRU, and SurgeNet across every station
 CSV found in data/demo/tidecast/ (10 real Hohonu station tidal predictions
 from dcablayan/tideformer) and writes a markdown report.
-
-Falls back to demo synthetic data if no tidecast files are found.
 
 Usage
 -----
@@ -46,13 +44,20 @@ def benchmark_station(path: Path) -> dict[str, float]:
     train, val, test = temporal_split(windows)
     fit_windows = train + val
 
+    actual = [w["target_value"] for w in test]
+    persistence_pred = [w["values"][-1] for w in test]
+    results = {
+        "Persistence": rmse(actual, persistence_pred),
+    }
+
     models = {
         "TinyTide": TinyTidePrototype(lookback=LOOKBACK, lr=0.0005, epochs=2),
         "HarmonicNet": HarmonicNetPrototype(lookback=LOOKBACK),
         "WaveGRU": WaveGRUPrototype(lookback=LOOKBACK),
         "SurgeNet": SurgeNetPrototype(lookback=LOOKBACK),
     }
-    return {name: model.fit(fit_windows).evaluate(test) for name, model in models.items()}
+    results.update({name: model.fit(fit_windows).evaluate(test) for name, model in models.items()})
+    return results
 
 
 def main() -> None:
@@ -67,8 +72,11 @@ def main() -> None:
         )
         return
 
-    MODEL_NAMES = ["TinyTide", "HarmonicNet", "WaveGRU", "SurgeNet"]
-    DISPLAY_NAMES = [DISPLAY_BY_KEY.get(m, m) for m in MODEL_NAMES]
+    MODEL_NAMES = ["Persistence", "TinyTide", "HarmonicNet", "WaveGRU", "SurgeNet"]
+    DISPLAY_NAMES = [
+        "Persistence (last value)" if m == "Persistence" else DISPLAY_BY_KEY.get(m, m)
+        for m in MODEL_NAMES
+    ]
     per_station: dict[str, dict[str, float]] = {}
     overall: dict[str, list[float]] = {m: [] for m in MODEL_NAMES}
 
@@ -92,8 +100,9 @@ def main() -> None:
     lines = [
         "# Wai Benchmark Results",
         "",
-        "Models from `src/models/prototypes.py` (ported from dcablayan/tideformer).",
+        "Models from `src/models/prototypes.py` (ported from dcablayan/tideformer) plus a last-value persistence comparator.",
         "Evaluated on tidecast tidal-prediction data (NOAA-derived, Hawaiian stations).",
+        "WaveGRUPrototype is a smoothing heuristic, not a real GRU. SurgeNetPrototype is a residual heuristic, not meteorological surge modeling.",
         f"Lookback: {LOOKBACK} steps (144 min at 6-min cadence) · Max windows: {MAX_WINDOWS}",
         "",
         f"| Station | {header_cols} |",

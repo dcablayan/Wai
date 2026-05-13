@@ -41,28 +41,32 @@
     <tr><td>Units</td><td>m</td></tr>
     <tr><td>Location (lat, lon)</td><td>21.3069, -157.8583</td></tr>
     <tr><td>Total Observations</td><td>21,600</td></tr>
+    <tr><td>Threshold Mode</td><td>train_mean_plus_2std</td></tr>
+    <tr><td>Alert Threshold</td><td>0.49 m</td></tr>
+    <tr><td>Threshold Source</td><td>first_75_percent_reference_window</td></tr>
+    <tr><td>Threshold Reference Range</td><td>2024-01-01 to 2024-03-08 (n=16,200)</td></tr>
   </table>
 
   <h2>Water-Level Statistics</h2>
   <div class="grid3">
-    <div class="card"><div class="card-val">0.003</div><div class="card-lbl">Mean (m)</div></div>
-    <div class="card"><div class="card-val">0.673</div><div class="card-lbl">Max (m)</div></div>
-    <div class="card"><div class="card-val">-0.689</div><div class="card-lbl">Min (m)</div></div>
+    <div class="card"><div class="card-val">0.006</div><div class="card-lbl">Mean (m)</div></div>
+    <div class="card"><div class="card-val">0.856</div><div class="card-lbl">Max (m)</div></div>
+    <div class="card"><div class="card-val">-0.677</div><div class="card-lbl">Min (m)</div></div>
   </div>
 
   <h2>Forecast Performance</h2>
-  <table><tr><th>Model</th><th>MAE (m)</th><th>RMSE (m)</th><th>R&sup2;</th></tr><tr><td>persistence</td><td>0.2418</td><td>0.3239</td><td>-1.0741</td></tr><tr><td>harmonic_ridge</td><td>0.0150</td><td>0.0188</td><td>0.9930</td></tr><tr><td>wave_gru</td><td>0.0776</td><td>0.0974</td><td>0.8124</td></tr><tr><td>grad_boost</td><td>0.0179</td><td>0.0225</td><td>0.9901</td></tr></table>
+  <table><tr><th>Model</th><th>MAE (m)</th><th>RMSE (m)</th><th>R&sup2;</th></tr><tr><td>persistence</td><td>0.0234</td><td>0.0294</td><td>0.9847</td></tr><tr><td>persistence_constant</td><td>0.2443</td><td>0.3245</td><td>-0.8654</td></tr><tr><td>harmonic_ridge</td><td>0.0177</td><td>0.0225</td><td>0.9911</td></tr><tr><td>wave_gru</td><td>0.0795</td><td>0.1004</td><td>0.8214</td></tr><tr><td>grad_boost</td><td>0.0222</td><td>0.0391</td><td>0.9730</td></tr></table>
 
   <h2>High-Water / Anomaly Events</h2>
   <div class="anomaly-box">
-    <p>Detected <strong>45</strong> high-water events (&ge;&nbsp;0.48&nbsp;m):</p><table><tr><th>Timestamp (UTC)</th><th>Water Level (m)</th></tr><tr><td>2024-01-20 20:54 UTC</td><td>0.491</td></tr><tr><td>2024-01-20 21:00 UTC</td><td>0.488</td></tr><tr><td>2024-01-20 21:06 UTC</td><td>0.522</td></tr><tr><td>2024-01-20 21:12 UTC</td><td>0.504</td></tr><tr><td>2024-01-20 21:18 UTC</td><td>0.508</td></tr><tr><td>2024-01-20 21:24 UTC</td><td>0.546</td></tr><tr><td>2024-01-20 21:30 UTC</td><td>0.560</td></tr><tr><td>2024-01-20 21:36 UTC</td><td>0.563</td></tr><tr><td>2024-01-20 21:42 UTC</td><td>0.605</td></tr><tr><td>2024-01-20 21:48 UTC</td><td>0.574</td></tr><tr><td>2024-01-20 21:54 UTC</td><td>0.606</td></tr><tr><td>2024-01-20 22:00 UTC</td><td>0.609</td></tr><tr><td>2024-01-20 22:06 UTC</td><td>0.584</td></tr><tr><td>2024-01-20 22:12 UTC</td><td>0.596</td></tr><tr><td>2024-01-20 22:18 UTC</td><td>0.629</td></tr><tr><td>2024-01-20 22:24 UTC</td><td>0.673</td></tr><tr><td>2024-01-20 22:30 UTC</td><td>0.650</td></tr><tr><td>2024-01-20 22:36 UTC</td><td>0.608</td></tr><tr><td>2024-01-20 22:42 UTC</td><td>0.583</td></tr><tr><td>2024-01-20 22:48 UTC</td><td>0.662</td></tr><tr><td>2024-01-20 22:54 UTC</td><td>0.647</td></tr><tr><td>2024-01-20 23:00 UTC</td><td>0.672</td></tr><tr><td>2024-01-20 23:06 UTC</td><td>0.632</td></tr><tr><td>2024-01-20 23:12 UTC</td><td>0.655</td></tr><tr><td>2024-01-20 23:18 UTC</td><td>0.664</td></tr></table>
+    <p>Detected <strong>108</strong> high-water events (&ge;&nbsp;0.49&nbsp;m; train_mean_plus_2std, first_75_percent_reference_window):</p><table><tr><th>Timestamp (UTC)</th><th>Water Level (m)</th></tr><tr><td>2024-01-20 21:06 UTC</td><td>0.522</td></tr><tr><td>2024-01-20 21:12 UTC</td><td>0.504</td></tr><tr><td>2024-01-20 21:18 UTC</td><td>0.508</td></tr><tr><td>2024-01-20 21:24 UTC</td><td>0.546</td></tr><tr><td>2024-01-20 21:30 UTC</td><td>0.560</td></tr><tr><td>2024-01-20 21:36 UTC</td><td>0.563</td></tr><tr><td>2024-01-20 21:42 UTC</td><td>0.605</td></tr><tr><td>2024-01-20 21:48 UTC</td><td>0.574</td></tr><tr><td>2024-01-20 21:54 UTC</td><td>0.606</td></tr><tr><td>2024-01-20 22:00 UTC</td><td>0.609</td></tr><tr><td>2024-01-20 22:06 UTC</td><td>0.584</td></tr><tr><td>2024-01-20 22:12 UTC</td><td>0.596</td></tr><tr><td>2024-01-20 22:18 UTC</td><td>0.629</td></tr><tr><td>2024-01-20 22:24 UTC</td><td>0.673</td></tr><tr><td>2024-01-20 22:30 UTC</td><td>0.650</td></tr><tr><td>2024-01-20 22:36 UTC</td><td>0.608</td></tr><tr><td>2024-01-20 22:42 UTC</td><td>0.583</td></tr><tr><td>2024-01-20 22:48 UTC</td><td>0.662</td></tr><tr><td>2024-01-20 22:54 UTC</td><td>0.647</td></tr><tr><td>2024-01-20 23:00 UTC</td><td>0.672</td></tr><tr><td>2024-01-20 23:06 UTC</td><td>0.632</td></tr><tr><td>2024-01-20 23:12 UTC</td><td>0.655</td></tr><tr><td>2024-01-20 23:18 UTC</td><td>0.664</td></tr><tr><td>2024-01-20 23:24 UTC</td><td>0.636</td></tr><tr><td>2024-01-20 23:30 UTC</td><td>0.633</td></tr></table>
   </div>
 
   <h2>Trend Notes</h2>
-  <p>Water levels show a slight downward trend over this period (-0.00×10⁻⁴ m per 6-min step). This is synthetic demo data — no real sea-level inference should be drawn.</p>
+  <p>Water levels show a slight upward trend over this period (0.00×10⁻⁴ m per 6-min step). This is synthetic demo data — no real sea-level inference should be drawn.</p>
 
   <div class="footer">
-    Generated by <strong>Wai</strong> on 2026-05-12 18:21 UTC &bull;
+    Generated by <strong>Wai</strong> on 2026-05-13 08:57 UTC &bull;
     Data: DEMO (synthetic) &bull;
     <a href="https://github.com/dcablayan/Wai" target="_blank">GitHub</a>
   </div>
