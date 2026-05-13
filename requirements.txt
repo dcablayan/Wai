@@ -20,7 +20,3 @@ timezonefinder>=6.2
 # Testing
 pytest>=7.4
 pytest-cov>=4.1
-
-# Optional deep-learning backends (not required for baseline)
-# tensorflow>=2.13
-# torch>=2.0

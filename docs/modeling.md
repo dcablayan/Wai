@@ -100,41 +100,40 @@ for why this matters.
 > unchanged for import stability. The full mapping is in
 > `src/models/branding.py`.
 
-### ʻAle Iki (Ripple) — `TinyTidePrototype`
+### TinyTidePrototype
 
 Two-layer MLP-style forecaster with hour-of-day and lunar-phase covariates
-plus a direct skip connection from the last observation. Trains via lightweight
-gradient descent (no autograd). **Best performer** on tidecast data (mean RMSE
-0.222 ft).
+plus a direct skip connection from the last observation. Trains via
+lightweight gradient descent (no autograd). Compare it to the persistence
+row in `reports/benchmark_results.md`; do not assume it always wins.
 
-### Nalu Hoʻokani (Harmonic Wave) — `HarmonicNetPrototype`
+### HarmonicNetPrototype
 
 Physics-informed projection over 8 tidal constituents (M2, S2, K1, O1, Mm,
 MSf, M4, M6) using least-squares amplitude fitting on the training windows,
 plus a causal residual smoothing head. Underperforms on short windows because
 the long-period constituents (Mm, MSf) need months of data to fit reliably.
 
-### Nalu Holo (Fast Wave) — `WaveGRUPrototype`
+### WaveGRUPrototype
 
 Bidirectional double-exponential smoothing with attention-like weighting.
 Alpha/beta selected via a 4-candidate grid search on training windows.
-Second-best performer on tidecast (mean RMSE 0.911 ft). This is the algorithm
-wrapped by `WaveGRUModel` in the pipeline tier.
+This is a smoothing heuristic, not a real GRU and not a deep-learning model.
+It is the algorithm wrapped by `WaveGRUModel` in the pipeline tier.
 
-### ʻAle Piʻi (Rising Wave) — `SurgeNetPrototype`
+### SurgeNetPrototype
 
-Dual-head model: `HarmonicNetPrototype` as the tide head, plus a surge
-magnitude estimated from the harmonic residual. Accepts optional
-`external_values` in the window dict (e.g. wind/pressure proxy). Returns
-`(prediction, surge_magnitude)`. Currently underperforms because the surge
-head amplifies harmonic fitting error.
+Residual heuristic: `HarmonicNetPrototype` as the tide head plus a residual
+magnitude estimated from harmonic error. Accepts optional `external_values` in
+the window dict, but it is not meteorological surge modeling and should not be
+described as storm-surge prediction.
 
-### Kai Eʻe (Tsunami) — `TsunamiSentinelPrototype`
+### TsunamiSentinelPrototype
 
 High-pass multi-scale anomaly detector. Computes residual energy relative to
 a local rolling baseline across multiple scales and flags windows exceeding a
 learned energy threshold. Returns `(next_value_prediction, tsunami_flag)`.
-Not evaluated with RMSE; designed for detection, not point forecasting.
+This is an anomaly toy, not a validated tsunami detector.
 
 **Important**: All prototype model names ("GRU", "Net", "AI") are descriptive
 of the algorithmic concept they implement, not claims about deep learning

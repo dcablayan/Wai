@@ -42,6 +42,27 @@ def compute_metrics(actual: np.ndarray, forecast: np.ndarray) -> Dict[str, float
     return {"mae": mae, "rmse": rmse, "r2": r2, "nse": nse, "corr": corr}
 
 
+def skill_score(
+    model_error: float,
+    reference_error: float,
+) -> float:
+    """Error-reduction skill score relative to a baseline.
+
+    Defined as ``1 - model_error / reference_error`` for lower-is-better
+    metrics such as MAE and RMSE. Positive values mean the model improves on
+    the reference; zero means parity; negative values mean worse than the
+    reference.
+    """
+    try:
+        m = float(model_error)
+        r = float(reference_error)
+    except (TypeError, ValueError):
+        return float("nan")
+    if np.isnan(m) or np.isnan(r) or r <= 0:
+        return float("nan")
+    return float(1.0 - m / r)
+
+
 def compute_event_metrics(
     actual: np.ndarray,
     forecast: np.ndarray,

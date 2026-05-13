@@ -32,7 +32,7 @@ Forecasting (src/models/baseline.py)
    │  PersistenceModel (rolling 1-step) — ʻAle Kūpaʻa: primary naive baseline; pred[t]=obs[t-1]
    │  PersistenceModel (constant)       — constant holdout reference; pred[t]=train[-1]
    │  HarmonicRidgeModel     — Nalu Hoʻokani Ridge: harmonic regression + Ridge
-   │  WaveGRUModel           — Nalu Holo Adapter: DataFrame adapter for WaveGRUPrototype
+   │  WaveGRUModel           — DataFrame adapter for smoothing heuristic
    │  GradBoostModel         — HistGradientBoosting over same feature matrix
    │  compute_metrics()      — MAE, RMSE, R², NSE, Pearson correlation
    │  compute_event_metrics() — precision/recall/F1/peak-error on threshold exceedances
@@ -62,11 +62,12 @@ Windowing (src/data/windowing.py)
    │  temporal_split()       — train / val / test split by time order
    ▼
 Prototype Benchmarks (src/models/prototypes.py)
-   │  TinyTidePrototype       — ʻAle Iki (Ripple): two-layer MLP-style with skip connection
-   │  HarmonicNetPrototype    — Nalu Hoʻokani (Harmonic Wave): 8-constituent harmonic projection
-   │  WaveGRUPrototype        — Nalu Holo (Fast Wave): bidirectional double-exp smoothing + attention
-   │  SurgeNetPrototype       — ʻAle Piʻi (Rising Wave): dual-head tide + surge residual estimator
-   │  TsunamiSentinelPrototype — Kai Eʻe (Tsunami): multi-scale anomaly detector
+   │  Persistence             — last-value benchmark comparator
+   │  TinyTidePrototype       — lightweight tidal-covariate prototype
+   │  HarmonicNetPrototype    — 8-constituent harmonic projection
+   │  WaveGRUPrototype        — smoothing heuristic, not a real GRU
+   │  SurgeNetPrototype       — residual heuristic, not meteorological surge modeling
+   │  TsunamiSentinelPrototype — anomaly toy, not a validated tsunami detector
    ▼
 Benchmark Script (scripts/run_benchmark.py)
    │  benchmark_station()     — fits + evaluates all models per station
@@ -88,7 +89,7 @@ Wai/
 │   │   └── engineering.py   8-constituent tidal harmonics, temporal covariates, lags, rolling windows
 │   ├── models/
 │   │   ├── baseline.py      PersistenceModel + HarmonicRidgeModel + WaveGRUModel adapter
-│   │   ├── branding.py      Wave model display names (Hawaiian branding, single source of truth)
+│   │   ├── branding.py      Optional display-name mapping
 │   │   ├── metrics.py       MAE / RMSE / R² / NSE / corr
 │   │   └── prototypes.py    Pure-Python prototype benchmark models
 │   └── reporting/
@@ -152,7 +153,7 @@ avoids mixing synthetic and NOAA-derived signal in the same evaluation loop.
 (fixed seed) and generates a CSV that can be committed safely. No private data,
 no API keys.
 
-**Extensibility** — `HarmonicRidgeModel` uses a scikit-learn `Pipeline`, so
-swapping the Ridge estimator for an LSTM or Transformer requires only replacing
-the estimator object. `build_feature_matrix()` produces the same feature tensor
-regardless of downstream model.
+**Extensibility** — `HarmonicRidgeModel` uses a scikit-learn `Pipeline` and
+`build_feature_matrix()` keeps feature construction separate from estimation.
+The current project intentionally stays in lightweight statistical and
+scikit-learn modeling.

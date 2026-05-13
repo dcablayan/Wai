@@ -15,6 +15,7 @@ from src.models.metrics import (
     compute_event_metrics,
     compute_metrics,
     save_metrics,
+    skill_score,
 )
 
 
@@ -62,6 +63,18 @@ def test_save_metrics_creates_file():
         assert out.exists()
         loaded = json.loads(out.read_text())
         assert loaded["model_a"]["mae"] == pytest.approx(0.1)
+
+
+def test_skill_score_positive_for_error_reduction():
+    assert skill_score(0.25, 0.5) == pytest.approx(0.5)
+
+
+def test_skill_score_negative_when_worse_than_reference():
+    assert skill_score(0.75, 0.5) == pytest.approx(-0.5)
+
+
+def test_skill_score_invalid_reference_returns_nan():
+    assert math.isnan(skill_score(0.1, 0.0))
 
 
 # ── compute_event_metrics ──────────────────────────────────────────────────────

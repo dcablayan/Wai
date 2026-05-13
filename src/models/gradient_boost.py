@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import HistGradientBoostingRegressor
 
-from src.features.engineering import build_feature_matrix
+from src.features.engineering import build_feature_frame, build_feature_matrix
 from src.models.metrics import compute_metrics
 
 
@@ -64,6 +64,20 @@ class GradBoostModel:
         X, _ = build_feature_matrix(df, target_col)
         X = X[self._feature_cols]
         return self._model.predict(X)
+
+    def predict_aligned(self, df: pd.DataFrame, target_col: str = "water_level") -> pd.DataFrame:
+        """Return timestamps, actual values, and predictions on valid feature rows."""
+        if self._model is None:
+            raise RuntimeError("Call fit() before predict_aligned()")
+        feat = build_feature_frame(df, target_col=target_col)
+        X = feat[self._feature_cols]
+        pred = self._model.predict(X)
+        return pd.DataFrame({
+            "timestamp": feat["timestamp"].values,
+            "actual": feat[target_col].values,
+            "prediction": pred,
+            "_source_row": feat["_source_row"].astype(int).values,
+        })
 
     def evaluate(self, df: pd.DataFrame, target_col: str = "water_level") -> dict:
         if self._model is None:

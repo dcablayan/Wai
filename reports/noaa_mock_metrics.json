@@ -1,0 +1,1145 @@
+{
+  "_meta": {
+    "report_kind": "mock",
+    "offline_mode": true,
+    "allow_mock": false,
+    "any_mock_used": true,
+    "stations_evaluated": 6,
+    "output_json": "noaa_mock_metrics.json",
+    "output_markdown": "noaa_mock_metrics.md"
+  },
+  "9414290": {
+    "station": "San Francisco, CA",
+    "holdout_type": "temporal",
+    "data_source": "NOAA_COOPS_MOCK",
+    "observation_source": "NOAA_COOPS_MOCK",
+    "prediction_source": "NOAA_PREDICTIONS_MOCK",
+    "mock_used": true,
+    "station_id": "9414290",
+    "begin_date": "20240101",
+    "end_date": "20240128",
+    "n_merged": 6481,
+    "n_train": 4860,
+    "n_test": 1621,
+    "train_start": "2024-01-01 00:00:00+00:00",
+    "train_end": "2024-01-21 05:54:00+00:00",
+    "test_start": "2024-01-21 06:00:00+00:00",
+    "test_end": "2024-01-28 00:00:00+00:00",
+    "event_threshold_m": 0.8273,
+    "event_threshold_source": "train_mean_plus_2std",
+    "rolling_persistence": {
+      "mae": 0.05904250162431697,
+      "rmse": 0.07448150754993398,
+      "r2": 0.9690115697126584,
+      "nse": 0.9690115697126584,
+      "corr": 0.9845113168379226,
+      "mae_skill_vs_rolling_persistence": 0.0,
+      "rmse_skill_vs_rolling_persistence": 0.0,
+      "mae_skill_vs_noaa_prediction": -0.4702733210772403,
+      "rmse_skill_vs_noaa_prediction": -0.47463549255787685
+    },
+    "noaa_prediction": {
+      "mae": 0.04015750049865401,
+      "rmse": 0.05050841914888381,
+      "r2": 0.985749496389742,
+      "nse": 0.985749496389742,
+      "corr": 0.9928560906484483,
+      "mae_skill_vs_rolling_persistence": 0.3198543524769125,
+      "rmse_skill_vs_rolling_persistence": 0.321866315406923,
+      "mae_skill_vs_noaa_prediction": 0.0,
+      "rmse_skill_vs_noaa_prediction": 0.0
+    },
+    "noaa_residual_persistence": {
+      "mae": 0.05719801943368938,
+      "rmse": 0.07201688051539196,
+      "r2": 0.9710284806213347,
+      "nse": 0.9710284806213347,
+      "corr": 0.985514076510843,
+      "mae_skill_vs_rolling_persistence": 0.031239905828582493,
+      "rmse_skill_vs_rolling_persistence": 0.033090455814011044,
+      "mae_skill_vs_noaa_prediction": -0.4243421209845102,
+      "rmse_skill_vs_noaa_prediction": -0.4258391319496182
+    },
+    "harmonic_ridge": {
+      "mae": 0.04066707878293786,
+      "rmse": 0.05110355948644015,
+      "r2": 0.9847692519317844,
+      "nse": 0.9847692519317844,
+      "corr": 0.9925193798777393,
+      "mae_skill_vs_rolling_persistence": 0.30738197508163356,
+      "rmse_skill_vs_rolling_persistence": 0.3102703570866897,
+      "mae_skill_vs_noaa_prediction": -0.017668571096745245,
+      "rmse_skill_vs_noaa_prediction": -0.016294120821627844,
+      "mae_block_ci_95": {
+        "lower": 0.039229,
+        "upper": 0.042267,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "rmse_block_ci_95": {
+        "lower": 0.049342,
+        "upper": 0.052851,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.03911,
+        0.042233
+      ],
+      "rmse_iid_ci_95": [
+        0.04933,
+        0.052959
+      ],
+      "mae_ci_95": [
+        0.039229,
+        0.042267
+      ],
+      "rmse_ci_95": [
+        0.049342,
+        0.052851
+      ]
+    },
+    "grad_boost": {
+      "mae": 0.04653305146813219,
+      "rmse": 0.05808116543449182,
+      "r2": 0.9803261399751356,
+      "nse": 0.9803261399751356,
+      "corr": 0.9902218225058148,
+      "mae_skill_vs_rolling_persistence": 0.20747614124660063,
+      "rmse_skill_vs_rolling_persistence": 0.2160956712662927,
+      "mae_skill_vs_noaa_prediction": -0.16446092056687345,
+      "rmse_skill_vs_noaa_prediction": -0.15505744716676317,
+      "mae_block_ci_95": {
+        "lower": 0.044628,
+        "upper": 0.048439,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "rmse_block_ci_95": {
+        "lower": 0.055959,
+        "upper": 0.060466,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.044929,
+        0.048196
+      ],
+      "rmse_iid_ci_95": [
+        0.056127,
+        0.06011
+      ],
+      "mae_ci_95": [
+        0.044628,
+        0.048439
+      ],
+      "rmse_ci_95": [
+        0.055959,
+        0.060466
+      ]
+    },
+    "hybrid_residual_ridge": {
+      "mae": 0.04059426961231893,
+      "rmse": 0.05104010170725426,
+      "r2": 0.9848070539704887,
+      "nse": 0.9848070539704887,
+      "corr": 0.9925536882481281,
+      "mae_skill_vs_rolling_persistence": 0.30862201851379645,
+      "rmse_skill_vs_rolling_persistence": 0.3111268279826078,
+      "mae_skill_vs_noaa_prediction": -0.015846566496365844,
+      "rmse_skill_vs_noaa_prediction": -0.015032138905786141,
+      "mae_block_ci_95": {
+        "lower": 0.03917,
+        "upper": 0.04217,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "rmse_block_ci_95": {
+        "lower": 0.04929,
+        "upper": 0.052733,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.03903,
+        0.04209
+      ],
+      "rmse_iid_ci_95": [
+        0.049255,
+        0.052882
+      ],
+      "mae_ci_95": [
+        0.03917,
+        0.04217
+      ],
+      "rmse_ci_95": [
+        0.04929,
+        0.052733
+      ]
+    },
+    "event_metrics_harmonic_ridge": {
+      "precision": null,
+      "recall": 0.0,
+      "f1": null,
+      "peak_error_m": 0.076,
+      "threshold_agree": 0.9994
+    }
+  },
+  "1612340": {
+    "station": "Honolulu, HI",
+    "holdout_type": "temporal",
+    "data_source": "NOAA_COOPS_MOCK",
+    "observation_source": "NOAA_COOPS_MOCK",
+    "prediction_source": "NOAA_PREDICTIONS_MOCK",
+    "mock_used": true,
+    "station_id": "1612340",
+    "begin_date": "20240101",
+    "end_date": "20240128",
+    "n_merged": 6481,
+    "n_train": 4860,
+    "n_test": 1621,
+    "train_start": "2024-01-01 00:00:00+00:00",
+    "train_end": "2024-01-21 05:54:00+00:00",
+    "test_start": "2024-01-21 06:00:00+00:00",
+    "test_end": "2024-01-28 00:00:00+00:00",
+    "event_threshold_m": 0.8289,
+    "event_threshold_source": "train_mean_plus_2std",
+    "rolling_persistence": {
+      "mae": 0.0584260125371846,
+      "rmse": 0.07273358497905495,
+      "r2": 0.970053498300421,
+      "nse": 0.970053498300421,
+      "corr": 0.9850332750304148,
+      "mae_skill_vs_rolling_persistence": 0.0,
+      "rmse_skill_vs_rolling_persistence": 0.0,
+      "mae_skill_vs_noaa_prediction": -0.4745924507749266,
+      "rmse_skill_vs_noaa_prediction": -0.45235275463898383
+    },
+    "noaa_prediction": {
+      "mae": 0.03962180364241022,
+      "rmse": 0.05007983408075993,
+      "r2": 0.9858028271271351,
+      "nse": 0.9858028271271351,
+      "corr": 0.9928911786424996,
+      "mae_skill_vs_rolling_persistence": 0.32184652140699566,
+      "rmse_skill_vs_rolling_persistence": 0.3114620419826496,
+      "mae_skill_vs_noaa_prediction": 0.0,
+      "rmse_skill_vs_noaa_prediction": 0.0
+    },
+    "noaa_residual_persistence": {
+      "mae": 0.0561186620755684,
+      "rmse": 0.07025242067700539,
+      "r2": 0.9720617824759348,
+      "nse": 0.9720617824759348,
+      "corr": 0.98603063383273,
+      "mae_skill_vs_rolling_persistence": 0.03949183525313682,
+      "rmse_skill_vs_rolling_persistence": 0.034113048363614396,
+      "mae_skill_vs_noaa_prediction": -0.41635808864340396,
+      "rmse_skill_vs_noaa_prediction": -0.4028085748789556
+    },
+    "harmonic_ridge": {
+      "mae": 0.04021512663354997,
+      "rmse": 0.05079219602792282,
+      "r2": 0.9847583224205099,
+      "nse": 0.9847583224205099,
+      "corr": 0.9924473854815918,
+      "mae_skill_vs_rolling_persistence": 0.3120099563010207,
+      "rmse_skill_vs_rolling_persistence": 0.3023776583492883,
+      "mae_skill_vs_noaa_prediction": -0.013206945650247714,
+      "rmse_skill_vs_noaa_prediction": -0.012181736682232547,
+      "mae_block_ci_95": {
+        "lower": 0.038697,
+        "upper": 0.041684,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "rmse_block_ci_95": {
+        "lower": 0.049026,
+        "upper": 0.052515,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.038767,
+        0.041844
+      ],
+      "rmse_iid_ci_95": [
+        0.049173,
+        0.052546
+      ],
+      "mae_ci_95": [
+        0.038697,
+        0.041684
+      ],
+      "rmse_ci_95": [
+        0.049026,
+        0.052515
+      ]
+    },
+    "grad_boost": {
+      "mae": 0.04622185863906063,
+      "rmse": 0.05767629135508233,
+      "r2": 0.9803467922935414,
+      "nse": 0.9803467922935414,
+      "corr": 0.9901292592791081,
+      "mae_skill_vs_rolling_persistence": 0.20924832999516974,
+      "rmse_skill_vs_rolling_persistence": 0.20782575711549278,
+      "mae_skill_vs_noaa_prediction": -0.16454459140978295,
+      "rmse_skill_vs_noaa_prediction": -0.14936729093351464,
+      "mae_block_ci_95": {
+        "lower": 0.044534,
+        "upper": 0.047701,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "rmse_block_ci_95": {
+        "lower": 0.055877,
+        "upper": 0.059436,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.044596,
+        0.047896
+      ],
+      "rmse_iid_ci_95": [
+        0.055849,
+        0.059486
+      ],
+      "mae_ci_95": [
+        0.044534,
+        0.047701
+      ],
+      "rmse_ci_95": [
+        0.055877,
+        0.059436
+      ]
+    },
+    "hybrid_residual_ridge": {
+      "mae": 0.040221769805867835,
+      "rmse": 0.050771346875664154,
+      "r2": 0.9847708326429893,
+      "nse": 0.9847708326429893,
+      "corr": 0.9924753869378989,
+      "mae_skill_vs_rolling_persistence": 0.3118963066175343,
+      "rmse_skill_vs_rolling_persistence": 0.30266401797847486,
+      "mae_skill_vs_noaa_prediction": -0.01337431820125179,
+      "rmse_skill_vs_noaa_prediction": -0.011766256888251503,
+      "mae_block_ci_95": {
+        "lower": 0.038777,
+        "upper": 0.041677,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "rmse_block_ci_95": {
+        "lower": 0.048961,
+        "upper": 0.052526,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.038784,
+        0.041818
+      ],
+      "rmse_iid_ci_95": [
+        0.049085,
+        0.052608
+      ],
+      "mae_ci_95": [
+        0.038777,
+        0.041677
+      ],
+      "rmse_ci_95": [
+        0.048961,
+        0.052526
+      ]
+    },
+    "event_metrics_harmonic_ridge": {
+      "precision": null,
+      "recall": 0.0,
+      "f1": null,
+      "peak_error_m": 0.122,
+      "threshold_agree": 0.9987
+    }
+  },
+  "8443970": {
+    "station": "Boston, MA",
+    "holdout_type": "temporal",
+    "data_source": "NOAA_COOPS_MOCK",
+    "observation_source": "NOAA_COOPS_MOCK",
+    "prediction_source": "NOAA_PREDICTIONS_MOCK",
+    "mock_used": true,
+    "station_id": "8443970",
+    "begin_date": "20240101",
+    "end_date": "20240128",
+    "n_merged": 6481,
+    "n_train": 4860,
+    "n_test": 1621,
+    "train_start": "2024-01-01 00:00:00+00:00",
+    "train_end": "2024-01-21 05:54:00+00:00",
+    "test_start": "2024-01-21 06:00:00+00:00",
+    "test_end": "2024-01-28 00:00:00+00:00",
+    "event_threshold_m": 0.8343,
+    "event_threshold_source": "train_mean_plus_2std",
+    "rolling_persistence": {
+      "mae": 0.05846628719702674,
+      "rmse": 0.07362228962423224,
+      "r2": 0.9696432531431314,
+      "nse": 0.9696432531431314,
+      "corr": 0.9848288372552092,
+      "mae_skill_vs_rolling_persistence": 0.0,
+      "rmse_skill_vs_rolling_persistence": 0.0,
+      "mae_skill_vs_noaa_prediction": -0.45673088663182204,
+      "rmse_skill_vs_noaa_prediction": -0.47269844969530794
+    },
+    "noaa_prediction": {
+      "mae": 0.04013526982475773,
+      "rmse": 0.04999142196385433,
+      "r2": 0.9860032382624248,
+      "nse": 0.9860032382624248,
+      "corr": 0.9929774038279386,
+      "mae_skill_vs_rolling_persistence": 0.3135314084592876,
+      "rmse_skill_vs_rolling_persistence": 0.3209743649781843,
+      "mae_skill_vs_noaa_prediction": 0.0,
+      "rmse_skill_vs_noaa_prediction": 0.0
+    },
+    "noaa_residual_persistence": {
+      "mae": 0.05643301229842106,
+      "rmse": 0.0711481518243385,
+      "r2": 0.9716492967660962,
+      "nse": 0.9716492967660962,
+      "corr": 0.9858222804529788,
+      "mae_skill_vs_rolling_persistence": 0.03477687734392476,
+      "rmse_skill_vs_rolling_persistence": 0.0336058252537611,
+      "mae_skill_vs_noaa_prediction": -0.40607033526432046,
+      "rmse_skill_vs_noaa_prediction": -0.42320720294336267
+    },
+    "harmonic_ridge": {
+      "mae": 0.04038566491573844,
+      "rmse": 0.0503866035730442,
+      "r2": 0.9851729803688709,
+      "nse": 0.9851729803688709,
+      "corr": 0.9926044431696177,
+      "mae_skill_vs_rolling_persistence": 0.3113898349309798,
+      "rmse_skill_vs_rolling_persistence": 0.3167647757225426,
+      "mae_skill_vs_noaa_prediction": -0.003959091757198996,
+      "rmse_skill_vs_noaa_prediction": -0.005977843271431027,
+      "mae_block_ci_95": {
+        "lower": 0.038847,
+        "upper": 0.042122,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "rmse_block_ci_95": {
+        "lower": 0.048765,
+        "upper": 0.052116,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.038981,
+        0.041908
+      ],
+      "rmse_iid_ci_95": [
+        0.048713,
+        0.052061
+      ],
+      "mae_ci_95": [
+        0.038847,
+        0.042122
+      ],
+      "rmse_ci_95": [
+        0.048765,
+        0.052116
+      ]
+    },
+    "grad_boost": {
+      "mae": 0.04556702606097968,
+      "rmse": 0.057226428046395106,
+      "r2": 0.9808743162112602,
+      "nse": 0.9808743162112602,
+      "corr": 0.9904284324554702,
+      "mae_skill_vs_rolling_persistence": 0.22304319111686888,
+      "rmse_skill_vs_rolling_persistence": 0.22401772240521167,
+      "mae_skill_vs_noaa_prediction": -0.13276406848088929,
+      "rmse_skill_vs_noaa_prediction": -0.14253620172641024,
+      "mae_block_ci_95": {
+        "lower": 0.043865,
+        "upper": 0.047367,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "rmse_block_ci_95": {
+        "lower": 0.055286,
+        "upper": 0.05916,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.043937,
+        0.047246
+      ],
+      "rmse_iid_ci_95": [
+        0.055538,
+        0.059123
+      ],
+      "mae_ci_95": [
+        0.043865,
+        0.047367
+      ],
+      "rmse_ci_95": [
+        0.055286,
+        0.05916
+      ]
+    },
+    "hybrid_residual_ridge": {
+      "mae": 0.041134199015908694,
+      "rmse": 0.05156509592746249,
+      "r2": 0.9844712909425918,
+      "nse": 0.9844712909425918,
+      "corr": 0.9925616730054645,
+      "mae_skill_vs_rolling_persistence": 0.2986266876272652,
+      "rmse_skill_vs_rolling_persistence": 0.30078458593036916,
+      "mae_skill_vs_noaa_prediction": -0.022567120544744412,
+      "rmse_skill_vs_noaa_prediction": -0.029506660713768396,
+      "mae_block_ci_95": {
+        "lower": 0.039382,
+        "upper": 0.042805,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "rmse_block_ci_95": {
+        "lower": 0.04978,
+        "upper": 0.053459,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.039663,
+        0.042668
+      ],
+      "rmse_iid_ci_95": [
+        0.049967,
+        0.053234
+      ],
+      "mae_ci_95": [
+        0.039382,
+        0.042805
+      ],
+      "rmse_ci_95": [
+        0.04978,
+        0.053459
+      ]
+    },
+    "event_metrics_harmonic_ridge": {
+      "precision": null,
+      "recall": 0.0,
+      "f1": null,
+      "peak_error_m": 0.0928,
+      "threshold_agree": 0.9994
+    }
+  },
+  "8723214": {
+    "station": "Virginia Key, FL",
+    "holdout_type": "temporal",
+    "data_source": "NOAA_COOPS_MOCK",
+    "observation_source": "NOAA_COOPS_MOCK",
+    "prediction_source": "NOAA_PREDICTIONS_MOCK",
+    "mock_used": true,
+    "station_id": "8723214",
+    "begin_date": "20240101",
+    "end_date": "20240128",
+    "n_merged": 6481,
+    "n_train": 4860,
+    "n_test": 1621,
+    "train_start": "2024-01-01 00:00:00+00:00",
+    "train_end": "2024-01-21 05:54:00+00:00",
+    "test_start": "2024-01-21 06:00:00+00:00",
+    "test_end": "2024-01-28 00:00:00+00:00",
+    "event_threshold_m": 0.8302,
+    "event_threshold_source": "train_mean_plus_2std",
+    "rolling_persistence": {
+      "mae": 0.057245109669315994,
+      "rmse": 0.07268638051296106,
+      "r2": 0.9698535474804532,
+      "nse": 0.9698535474804532,
+      "corr": 0.9849311484231585,
+      "mae_skill_vs_rolling_persistence": 0.0,
+      "rmse_skill_vs_rolling_persistence": 0.0,
+      "mae_skill_vs_noaa_prediction": -0.4135422879951296,
+      "rmse_skill_vs_noaa_prediction": -0.4383051382345917
+    },
+    "noaa_prediction": {
+      "mae": 0.040497627948937055,
+      "rmse": 0.05053613352322301,
+      "r2": 0.9854274971123816,
+      "nse": 0.9854274971123816,
+      "corr": 0.9927319145331364,
+      "mae_skill_vs_rolling_persistence": 0.29255742223437076,
+      "rmse_skill_vs_rolling_persistence": 0.3047372400911933,
+      "mae_skill_vs_noaa_prediction": 0.0,
+      "rmse_skill_vs_noaa_prediction": 0.0
+    },
+    "noaa_residual_persistence": {
+      "mae": 0.055347586684469555,
+      "rmse": 0.07021383037490572,
+      "r2": 0.9718696290710674,
+      "nse": 0.9718696290710674,
+      "corr": 0.985933609646873,
+      "mae_skill_vs_rolling_persistence": 0.033147337751778916,
+      "rmse_skill_vs_rolling_persistence": 0.0340166908932058,
+      "mae_skill_vs_noaa_prediction": -0.3666871243485328,
+      "rmse_skill_vs_noaa_prediction": -0.38937875693715607
+    },
+    "harmonic_ridge": {
+      "mae": 0.04082358324111726,
+      "rmse": 0.05100793400058886,
+      "r2": 0.9845239718773058,
+      "nse": 0.9845239718773058,
+      "corr": 0.9923252663640771,
+      "mae_skill_vs_rolling_persistence": 0.28659577359209654,
+      "rmse_skill_vs_rolling_persistence": 0.29761892789164757,
+      "mae_skill_vs_noaa_prediction": -0.007963142832720038,
+      "rmse_skill_vs_noaa_prediction": -0.008347398564783948,
+      "mae_block_ci_95": {
+        "lower": 0.039505,
+        "upper": 0.042205,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "rmse_block_ci_95": {
+        "lower": 0.049481,
+        "upper": 0.052718,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.039371,
+        0.04245
+      ],
+      "rmse_iid_ci_95": [
+        0.049203,
+        0.052874
+      ],
+      "mae_ci_95": [
+        0.039505,
+        0.042205
+      ],
+      "rmse_ci_95": [
+        0.049481,
+        0.052718
+      ]
+    },
+    "grad_boost": {
+      "mae": 0.04581451619810151,
+      "rmse": 0.05766971122139244,
+      "r2": 0.9802175718626821,
+      "nse": 0.9802175718626821,
+      "corr": 0.9901066344637692,
+      "mae_skill_vs_rolling_persistence": 0.1993777397364871,
+      "rmse_skill_vs_rolling_persistence": 0.20588601774396353,
+      "mae_skill_vs_noaa_prediction": -0.13119280739392325,
+      "rmse_skill_vs_noaa_prediction": -0.14004035696490025,
+      "mae_block_ci_95": {
+        "lower": 0.044231,
+        "upper": 0.047576,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "rmse_block_ci_95": {
+        "lower": 0.055743,
+        "upper": 0.059648,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.044101,
+        0.047685
+      ],
+      "rmse_iid_ci_95": [
+        0.055623,
+        0.059802
+      ],
+      "mae_ci_95": [
+        0.044231,
+        0.047576
+      ],
+      "rmse_ci_95": [
+        0.055743,
+        0.059648
+      ]
+    },
+    "hybrid_residual_ridge": {
+      "mae": 0.04099991876558886,
+      "rmse": 0.05123331068315324,
+      "r2": 0.9843869092181595,
+      "nse": 0.9843869092181595,
+      "corr": 0.9924105872034349,
+      "mae_skill_vs_rolling_persistence": 0.28351425799654273,
+      "rmse_skill_vs_rolling_persistence": 0.29451548292706686,
+      "mae_skill_vs_noaa_prediction": -0.012316991645786146,
+      "rmse_skill_vs_noaa_prediction": -0.01280274450289487,
+      "mae_block_ci_95": {
+        "lower": 0.039626,
+        "upper": 0.042394,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "rmse_block_ci_95": {
+        "lower": 0.049646,
+        "upper": 0.053062,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.039469,
+        0.042536
+      ],
+      "rmse_iid_ci_95": [
+        0.049289,
+        0.053111
+      ],
+      "mae_ci_95": [
+        0.039626,
+        0.042394
+      ],
+      "rmse_ci_95": [
+        0.049646,
+        0.053062
+      ]
+    },
+    "event_metrics_harmonic_ridge": {
+      "precision": null,
+      "recall": 0.0,
+      "f1": null,
+      "peak_error_m": 0.1299,
+      "threshold_agree": 0.9994
+    }
+  },
+  "9410230": {
+    "station": "La Jolla, CA",
+    "holdout_type": "temporal",
+    "data_source": "NOAA_COOPS_MOCK",
+    "observation_source": "NOAA_COOPS_MOCK",
+    "prediction_source": "NOAA_PREDICTIONS_MOCK",
+    "mock_used": true,
+    "station_id": "9410230",
+    "begin_date": "20240101",
+    "end_date": "20240128",
+    "n_merged": 6481,
+    "n_train": 4860,
+    "n_test": 1621,
+    "train_start": "2024-01-01 00:00:00+00:00",
+    "train_end": "2024-01-21 05:54:00+00:00",
+    "test_start": "2024-01-21 06:00:00+00:00",
+    "test_end": "2024-01-28 00:00:00+00:00",
+    "event_threshold_m": 0.8312,
+    "event_threshold_source": "train_mean_plus_2std",
+    "rolling_persistence": {
+      "mae": 0.05785057864932106,
+      "rmse": 0.07241633239438455,
+      "r2": 0.9704693753652459,
+      "nse": 0.9704693753652459,
+      "corr": 0.9852400663766132,
+      "mae_skill_vs_rolling_persistence": 0.0,
+      "rmse_skill_vs_rolling_persistence": 0.0,
+      "mae_skill_vs_noaa_prediction": -0.4573150035049456,
+      "rmse_skill_vs_noaa_prediction": -0.45501222245214845
+    },
+    "noaa_prediction": {
+      "mae": 0.03969668775123177,
+      "rmse": 0.04977025709951803,
+      "r2": 0.9860511196097551,
+      "nse": 0.9860511196097551,
+      "corr": 0.9930039270011557,
+      "mae_skill_vs_rolling_persistence": 0.31380655685632186,
+      "rmse_skill_vs_rolling_persistence": 0.31272054999325793,
+      "mae_skill_vs_noaa_prediction": 0.0,
+      "rmse_skill_vs_noaa_prediction": 0.0
+    },
+    "noaa_residual_persistence": {
+      "mae": 0.05590529692764751,
+      "rmse": 0.06990021894952805,
+      "r2": 0.972485814936252,
+      "nse": 0.972485814936252,
+      "corr": 0.9862407178908845,
+      "mae_skill_vs_rolling_persistence": 0.03362596826326447,
+      "rmse_skill_vs_rolling_persistence": 0.03474511013832582,
+      "mae_skill_vs_noaa_prediction": -0.4083113754475092,
+      "rmse_skill_vs_noaa_prediction": -0.40445766253043836
+    },
+    "harmonic_ridge": {
+      "mae": 0.04008709990860658,
+      "rmse": 0.05021812959429901,
+      "r2": 0.9852098344371706,
+      "nse": 0.9852098344371706,
+      "corr": 0.9926519152564117,
+      "mae_skill_vs_rolling_persistence": 0.3085303592805899,
+      "rmse_skill_vs_rolling_persistence": 0.30815174983159366,
+      "mae_skill_vs_noaa_prediction": -0.011998730360707643,
+      "rmse_skill_vs_noaa_prediction": -0.009559551459722204,
+      "mae_block_ci_95": {
+        "lower": 0.038521,
+        "upper": 0.041626,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "rmse_block_ci_95": {
+        "lower": 0.04846,
+        "upper": 0.051947,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.03854,
+        0.04149
+      ],
+      "rmse_iid_ci_95": [
+        0.048451,
+        0.051868
+      ],
+      "mae_ci_95": [
+        0.038521,
+        0.041626
+      ],
+      "rmse_ci_95": [
+        0.04846,
+        0.051947
+      ]
+    },
+    "grad_boost": {
+      "mae": 0.04547986908352522,
+      "rmse": 0.05720755686552239,
+      "r2": 0.9808062969576856,
+      "nse": 0.9808062969576856,
+      "corr": 0.9903579086574832,
+      "mae_skill_vs_rolling_persistence": 0.2155095078753949,
+      "rmse_skill_vs_rolling_persistence": 0.21185937362520868,
+      "mae_skill_vs_noaa_prediction": -0.14813917380980635,
+      "rmse_skill_vs_noaa_prediction": -0.15007141675423696,
+      "mae_block_ci_95": {
+        "lower": 0.04354,
+        "upper": 0.047543,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "rmse_block_ci_95": {
+        "lower": 0.055166,
+        "upper": 0.059302,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.043782,
+        0.047266
+      ],
+      "rmse_iid_ci_95": [
+        0.055284,
+        0.05927
+      ],
+      "mae_ci_95": [
+        0.04354,
+        0.047543
+      ],
+      "rmse_ci_95": [
+        0.055166,
+        0.059302
+      ]
+    },
+    "hybrid_residual_ridge": {
+      "mae": 0.03987130031512537,
+      "rmse": 0.05012262005926126,
+      "r2": 0.9852660395781546,
+      "nse": 0.9852660395781546,
+      "corr": 0.9926792169252847,
+      "mae_skill_vs_rolling_persistence": 0.3122527255209029,
+      "rmse_skill_vs_rolling_persistence": 0.30946757153232396,
+      "mae_skill_vs_noaa_prediction": -0.0065508701983800766,
+      "rmse_skill_vs_noaa_prediction": -0.007639476695253444,
+      "mae_block_ci_95": {
+        "lower": 0.038388,
+        "upper": 0.041466,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "rmse_block_ci_95": {
+        "lower": 0.048446,
+        "upper": 0.051885,
+        "block_length": 12,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 1581
+      },
+      "mae_iid_ci_95": [
+        0.038354,
+        0.041241
+      ],
+      "rmse_iid_ci_95": [
+        0.048279,
+        0.051714
+      ],
+      "mae_ci_95": [
+        0.038388,
+        0.041466
+      ],
+      "rmse_ci_95": [
+        0.048446,
+        0.051885
+      ]
+    },
+    "event_metrics_harmonic_ridge": {
+      "precision": null,
+      "recall": 0.0,
+      "f1": null,
+      "peak_error_m": 0.089,
+      "threshold_agree": 0.9994
+    }
+  },
+  "1612340_storm": {
+    "station": "Honolulu, HI (storm period)",
+    "holdout_type": "event",
+    "data_source": "NOAA_COOPS_MOCK",
+    "observation_source": "NOAA_COOPS_MOCK",
+    "prediction_source": "NOAA_PREDICTIONS_MOCK",
+    "mock_used": true,
+    "station_id": "1612340",
+    "begin_date": "20240112",
+    "end_date": "20240118",
+    "n_merged": 1441,
+    "n_train": 1080,
+    "n_test": 361,
+    "train_start": "2024-01-12 00:00:00+00:00",
+    "train_end": "2024-01-16 11:54:00+00:00",
+    "test_start": "2024-01-16 12:00:00+00:00",
+    "test_end": "2024-01-18 00:00:00+00:00",
+    "event_threshold_m": 0.8663,
+    "event_threshold_source": "train_mean_plus_2std",
+    "rolling_persistence": {
+      "mae": 0.06411080662350291,
+      "rmse": 0.07854835319783222,
+      "r2": 0.9596231383852089,
+      "nse": 0.9596231383852089,
+      "corr": 0.9798332277337308,
+      "mae_skill_vs_rolling_persistence": 0.0,
+      "rmse_skill_vs_rolling_persistence": 0.0,
+      "mae_skill_vs_noaa_prediction": -0.5246405296638328,
+      "rmse_skill_vs_noaa_prediction": -0.49023164392793084
+    },
+    "noaa_prediction": {
+      "mae": 0.042049785097631284,
+      "rmse": 0.052708821154002355,
+      "r2": 0.9818186973082931,
+      "nse": 0.9818186973082931,
+      "corr": 0.9908768747423666,
+      "mae_skill_vs_rolling_persistence": 0.34410768929218394,
+      "rmse_skill_vs_rolling_persistence": 0.32896338359571087,
+      "mae_skill_vs_noaa_prediction": 0.0,
+      "rmse_skill_vs_noaa_prediction": 0.0
+    },
+    "noaa_residual_persistence": {
+      "mae": 0.0619699492382313,
+      "rmse": 0.07652210278178825,
+      "r2": 0.9616794104321713,
+      "nse": 0.9616794104321713,
+      "corr": 0.9808418130652635,
+      "mae_skill_vs_rolling_persistence": 0.03339308141674158,
+      "rmse_skill_vs_rolling_persistence": 0.025796217661503973,
+      "mae_skill_vs_noaa_prediction": -0.4737280843255045,
+      "rmse_skill_vs_noaa_prediction": -0.4517893040751051
+    },
+    "harmonic_ridge": {
+      "mae": 0.0686115361027664,
+      "rmse": 0.08717782391297675,
+      "r2": 0.947240718472746,
+      "nse": 0.947240718472746,
+      "corr": 0.9764607804075328,
+      "mae_skill_vs_rolling_persistence": -0.053307416170734534,
+      "rmse_skill_vs_rolling_persistence": -0.1028286082499712,
+      "mae_skill_vs_noaa_prediction": -0.6222595274038776,
+      "rmse_skill_vs_noaa_prediction": -0.6423700572602768,
+      "mae_block_ci_95": {
+        "lower": 0.059682,
+        "upper": 0.078987,
+        "block_length": 7,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 321
+      },
+      "rmse_block_ci_95": {
+        "lower": 0.076021,
+        "upper": 0.098595,
+        "block_length": 7,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 321
+      },
+      "mae_iid_ci_95": [
+        0.062574,
+        0.074566
+      ],
+      "rmse_iid_ci_95": [
+        0.080416,
+        0.093845
+      ],
+      "mae_ci_95": [
+        0.059682,
+        0.078987
+      ],
+      "rmse_ci_95": [
+        0.076021,
+        0.098595
+      ]
+    },
+    "grad_boost": {
+      "mae": 0.052533803933645984,
+      "rmse": 0.06535091909162864,
+      "r2": 0.970352353479465,
+      "nse": 0.970352353479465,
+      "corr": 0.9854191583402885,
+      "mae_skill_vs_rolling_persistence": 0.19351397117696123,
+      "rmse_skill_vs_rolling_persistence": 0.1732890325225328,
+      "mae_skill_vs_noaa_prediction": -0.24211566717405586,
+      "rmse_skill_vs_noaa_prediction": -0.23116622912806295,
+      "mae_block_ci_95": {
+        "lower": 0.047802,
+        "upper": 0.057281,
+        "block_length": 7,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 321
+      },
+      "rmse_block_ci_95": {
+        "lower": 0.059481,
+        "upper": 0.071075,
+        "block_length": 7,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 321
+      },
+      "mae_iid_ci_95": [
+        0.048576,
+        0.056484
+      ],
+      "rmse_iid_ci_95": [
+        0.060215,
+        0.070173
+      ],
+      "mae_ci_95": [
+        0.047802,
+        0.057281
+      ],
+      "rmse_ci_95": [
+        0.059481,
+        0.071075
+      ]
+    },
+    "hybrid_residual_ridge": {
+      "mae": 0.055229048414669295,
+      "rmse": 0.0692841649855871,
+      "r2": 0.9666761785564122,
+      "nse": 0.9666761785564122,
+      "corr": 0.9860437456814894,
+      "mae_skill_vs_rolling_persistence": 0.1521372412345947,
+      "rmse_skill_vs_rolling_persistence": 0.12353215743157953,
+      "mae_skill_vs_noaa_prediction": -0.3058423563925252,
+      "rmse_skill_vs_noaa_prediction": -0.30526586816617063,
+      "mae_block_ci_95": {
+        "lower": 0.049037,
+        "upper": 0.061597,
+        "block_length": 7,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 321
+      },
+      "rmse_block_ci_95": {
+        "lower": 0.0612,
+        "upper": 0.076904,
+        "block_length": 7,
+        "n_boot": 500,
+        "method": "circular_block",
+        "n_samples": 321
+      },
+      "mae_iid_ci_95": [
+        0.051213,
+        0.059783
+      ],
+      "rmse_iid_ci_95": [
+        0.064234,
+        0.074997
+      ],
+      "mae_ci_95": [
+        0.049037,
+        0.061597
+      ],
+      "rmse_ci_95": [
+        0.0612,
+        0.076904
+      ]
+    },
+    "event_metrics_harmonic_ridge": {
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "peak_error_m": null,
+      "threshold_agree": 1.0
+    }
+  }
+}

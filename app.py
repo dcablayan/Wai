@@ -86,13 +86,14 @@ def run_forecast(station_id: str, train_frac: float = 0.75):
 
     Returns
     -------
-    (train_fit, train_cal, test, persist_pred, harmonic_pred, gradboost_pred,
-     harmonic_ci, gb_ci, train_threshold)
+    dict with aligned timestamps, actual values, model predictions, conformal
+    intervals, and coverage summaries. All plotted arrays are aligned to the
+    same feature-valid test timestamps.
 
-    where `persist_pred` is the rolling 1-step persistence (matches
-    `scripts/train_baseline.rolling_persistence_1step`) and `train_threshold`
-    is mean + 2σ fit on the training window only — never on the displayed
-    date range.
+    `persistence_pred` is the rolling 1-step persistence (matches
+    `scripts/train_baseline.rolling_persistence_1step`) sampled at the same
+    timestamps as the supervised models. `train_threshold` is mean + 2σ fit on
+    the training window only — never on the displayed date range.
     """
     from src.models.baseline import HarmonicRidgeModel
     from src.models.gradient_boost import GradBoostModel
@@ -119,31 +120,67 @@ def run_forecast(station_id: str, train_frac: float = 0.75):
         persist_pred[1:] = test_vals[:-1]
 
     harmonic = HarmonicRidgeModel(alpha=1.0).fit(train_fit)
-    harmonic_pred = harmonic.predict_on(test)
-    harmonic_cal_pred = harmonic.predict_on(train_cal)
+    harmonic_cal = harmonic.predict_aligned(train_cal)
+    harmonic_test = harmonic.predict_aligned(test)
 
     gradboost = GradBoostModel().fit(train_fit)
-    gradboost_pred = gradboost.predict_on(test)
-    gradboost_cal_pred = gradboost.predict_on(train_cal)
+    gradboost_cal = gradboost.predict_aligned(train_cal)
+    gradboost_test = gradboost.predict_aligned(test)
 
-    # Conformal calibration — align to valid rows
-    from src.features.engineering import build_feature_matrix
-    _, y_cal_h = build_feature_matrix(train_cal)
+    if not harmonic_test["timestamp"].equals(gradboost_test["timestamp"]):
+        raise RuntimeError("HarmonicRidge and GradBoost test timestamps are not aligned")
+    if not harmonic_cal["timestamp"].equals(gradboost_cal["timestamp"]):
+        raise RuntimeError("HarmonicRidge and GradBoost calibration timestamps are not aligned")
+
+    # Conformal calibration on each model's already-aligned calibration rows.
     harmonic_ci = ConformalIntervals(coverage=0.90)
-    harmonic_ci.calibrate(y_cal_h.values, harmonic_cal_pred[-len(y_cal_h):])
+    harmonic_ci.calibrate(
+        harmonic_cal["actual"].to_numpy(dtype=float),
+        harmonic_cal["prediction"].to_numpy(dtype=float),
+    )
 
     gb_ci = ConformalIntervals(coverage=0.90)
-    gb_ci.calibrate(y_cal_h.values, gradboost_cal_pred[-len(y_cal_h):])
+    gb_ci.calibrate(
+        gradboost_cal["actual"].to_numpy(dtype=float),
+        gradboost_cal["prediction"].to_numpy(dtype=float),
+    )
 
     # Train-window-only alert threshold.
     train_wl = train_full["water_level"].dropna()
     train_threshold = float(train_wl.mean() + 2.0 * train_wl.std())
 
-    return (
-        train_fit, train_cal, test,
-        persist_pred, harmonic_pred, gradboost_pred,
-        harmonic_ci, gb_ci, train_threshold,
-    )
+    rows = harmonic_test["_source_row"].to_numpy(dtype=int)
+    timestamps = harmonic_test["timestamp"].reset_index(drop=True)
+    actual = harmonic_test["actual"].to_numpy(dtype=float)
+    harmonic_pred = harmonic_test["prediction"].to_numpy(dtype=float)
+    gradboost_pred = gradboost_test["prediction"].to_numpy(dtype=float)
+    persist_aligned = persist_pred[rows]
+    h_lo, h_hi = harmonic_ci.intervals(harmonic_pred)
+    gb_lo, gb_hi = gb_ci.intervals(gradboost_pred)
+
+    return {
+        "train_fit": train_fit,
+        "train_cal": train_cal,
+        "test": test,
+        "timestamps": timestamps,
+        "actual": actual,
+        "persistence_pred": persist_aligned,
+        "harmonic_pred": harmonic_pred,
+        "gradboost_pred": gradboost_pred,
+        "harmonic_lower": h_lo,
+        "harmonic_upper": h_hi,
+        "gradboost_lower": gb_lo,
+        "gradboost_upper": gb_hi,
+        "harmonic_ci": harmonic_ci,
+        "gradboost_ci": gb_ci,
+        "harmonic_coverage": harmonic_ci.stratified_coverage(
+            actual, harmonic_pred, event_threshold=train_threshold,
+        ),
+        "gradboost_coverage": gb_ci.stratified_coverage(
+            actual, gradboost_pred, event_threshold=train_threshold,
+        ),
+        "train_threshold": train_threshold,
+    }
 
 
 # ── Sidebar ──────────────────────────────────────────────────────────────────
@@ -267,11 +304,7 @@ with tab_forecasts:
 
     with st.spinner("Running forecasts …"):
         try:
-            (
-                train_fit, train_cal, test,
-                persist_pred, harmonic_pred, gradboost_pred,
-                h_ci, gb_ci, train_threshold,
-            ) = run_forecast(station_id)
+            forecast = run_forecast(station_id)
             forecast_ok = True
         except Exception as e:
             st.error(f"Forecast failed: {e}")
@@ -287,35 +320,37 @@ with tab_forecasts:
 
     if forecast_ok and _HAS_PLOTLY:
         fig2 = go.Figure()
+        timestamps = forecast["timestamps"]
+        actual = forecast["actual"]
+        harmonic_pred = forecast["harmonic_pred"]
+        gradboost_pred = forecast["gradboost_pred"]
+        persist_pred = forecast["persistence_pred"]
 
         # Actual
         fig2.add_trace(go.Scatter(
-            x=test["timestamp"], y=test["water_level"],
+            x=timestamps, y=actual,
             name="Actual (synthetic)", line=dict(color="#1f77b4", width=1.5),
         ))
 
         # HarmonicRidge
-        aligned_test = test.iloc[-len(harmonic_pred):]
         if show_intervals:
-            h_lo, h_hi = h_ci.intervals(harmonic_pred)
             fig2.add_trace(go.Scatter(
-                x=pd.concat([aligned_test["timestamp"], aligned_test["timestamp"][::-1]]),
-                y=np.concatenate([h_hi, h_lo[::-1]]),
+                x=pd.concat([timestamps, timestamps[::-1]]),
+                y=np.concatenate([forecast["harmonic_upper"], forecast["harmonic_lower"][::-1]]),
                 fill="toself", fillcolor="rgba(44,160,44,0.15)",
                 line=dict(color="rgba(255,255,255,0)"),
                 name="HarmonicRidge 90% interval", showlegend=True,
             ))
         fig2.add_trace(go.Scatter(
-            x=aligned_test["timestamp"], y=harmonic_pred,
+            x=timestamps, y=harmonic_pred,
             name="HarmonicRidge (online 1-step)",
             line=dict(color="#2ca02c", width=1.5, dash="dash"),
         ))
 
         # GradBoost
         if show_gradboost:
-            aligned_test_gb = test.iloc[-len(gradboost_pred):]
             fig2.add_trace(go.Scatter(
-                x=aligned_test_gb["timestamp"], y=gradboost_pred,
+                x=timestamps, y=gradboost_pred,
                 name="GradBoost (online 1-step)",
                 line=dict(color="#9467bd", width=1.5, dash="dot"),
             ))
@@ -323,7 +358,7 @@ with tab_forecasts:
         # Rolling 1-step persistence
         if show_persist:
             fig2.add_trace(go.Scatter(
-                x=test["timestamp"], y=persist_pred,
+                x=timestamps, y=persist_pred,
                 name="Persistence (rolling 1-step)",
                 line=dict(color="#d62728", width=1, dash="dot"),
             ))
@@ -335,7 +370,10 @@ with tab_forecasts:
         )
         st.plotly_chart(fig2, use_container_width=True)
     elif forecast_ok:
-        st.line_chart(test.set_index("timestamp")["water_level"])
+        st.line_chart(pd.DataFrame({
+            "timestamp": forecast["timestamps"],
+            "water_level": forecast["actual"],
+        }).set_index("timestamp")["water_level"])
         st.info("Install plotly for richer charts: `pip install plotly`")
 
 
@@ -522,35 +560,23 @@ with tab_uncertainty:
 
     with st.spinner("Computing conformal intervals …"):
         try:
-            (
-                train_fit, train_cal, test,
-                _persist, harmonic_pred, gradboost_pred,
-                h_ci, gb_ci, train_threshold,
-            ) = run_forecast(station_id)
+            forecast = run_forecast(station_id)
             ci_ok = True
         except Exception as e:
             st.error(f"Could not compute intervals: {e}")
             ci_ok = False
 
     if ci_ok:
-        from src.features.engineering import build_feature_matrix
-        aligned_test = test.iloc[-len(harmonic_pred):]
-        _, y_test = build_feature_matrix(aligned_test)
-        actual_test = y_test.values
-        h_preds_test = harmonic_pred[-len(actual_test):]
-        h_lo, h_hi = h_ci.intervals(h_preds_test)
-        h_report = h_ci.stratified_coverage(
-            actual_test, h_preds_test, event_threshold=train_threshold,
-        )
-
-        aligned_test_gb = test.iloc[-len(gradboost_pred):]
-        _, y_test_gb = build_feature_matrix(aligned_test_gb)
-        actual_test_gb = y_test_gb.values
-        gb_preds_test = gradboost_pred[-len(actual_test_gb):]
-        gb_lo, gb_hi = gb_ci.intervals(gb_preds_test)
-        gb_report = gb_ci.stratified_coverage(
-            actual_test_gb, gb_preds_test, event_threshold=train_threshold,
-        )
+        timestamps = forecast["timestamps"]
+        actual_test = forecast["actual"]
+        h_preds_test = forecast["harmonic_pred"]
+        gb_preds_test = forecast["gradboost_pred"]
+        h_lo, h_hi = forecast["harmonic_lower"], forecast["harmonic_upper"]
+        h_ci = forecast["harmonic_ci"]
+        gb_ci = forecast["gradboost_ci"]
+        h_report = forecast["harmonic_coverage"]
+        gb_report = forecast["gradboost_coverage"]
+        train_threshold = forecast["train_threshold"]
 
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("HarmonicRidge qhat", f"±{h_ci.qhat:.4f} m")
@@ -586,18 +612,18 @@ with tab_uncertainty:
         if _HAS_PLOTLY:
             fig_u = go.Figure()
             fig_u.add_trace(go.Scatter(
-                x=aligned_test["timestamp"], y=actual_test,
+                x=timestamps, y=actual_test,
                 name="Actual", line=dict(color="#1f77b4", width=1.5),
             ))
             fig_u.add_trace(go.Scatter(
-                x=pd.concat([aligned_test["timestamp"], aligned_test["timestamp"][::-1]]),
+                x=pd.concat([timestamps, timestamps[::-1]]),
                 y=np.concatenate([h_hi, h_lo[::-1]]),
                 fill="toself", fillcolor="rgba(44,160,44,0.15)",
                 line=dict(color="rgba(255,255,255,0)"),
                 name="HarmonicRidge 90% interval",
             ))
             fig_u.add_trace(go.Scatter(
-                x=aligned_test["timestamp"], y=harmonic_pred,
+                x=timestamps, y=h_preds_test,
                 name="HarmonicRidge forecast", line=dict(color="#2ca02c", dash="dash"),
             ))
             fig_u.update_layout(
