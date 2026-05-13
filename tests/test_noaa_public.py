@@ -11,6 +11,7 @@ import pandas as pd
 import pytest
 
 from scripts.evaluate_noaa_public import (
+    LiveNOAAFetchError,
     NOAA_STATIONS,
     evaluate_station,
     fetch_noaa_df,
@@ -45,15 +46,70 @@ def _get_mock_df(n: int = 500) -> pd.DataFrame:
 # ── fetch_noaa_df offline mode ─────────────────────────────────────────────────
 
 def test_fetch_noaa_df_offline_returns_dataframe():
-    df = fetch_noaa_df("9414290", "20240101", "20240128", 37.8, -122.5, offline=True)
+    df, prov = fetch_noaa_df("9414290", "20240101", "20240128", 37.8, -122.5, offline=True)
     assert isinstance(df, pd.DataFrame)
     assert len(df) > 0
+    assert prov["mock_used"] is True
+    assert prov["data_source"] == "NOAA_COOPS_MOCK"
+    assert prov["station_id"] == "9414290"
+    assert prov["begin_date"] == "20240101"
+    assert prov["end_date"] == "20240128"
 
 
 def test_fetch_noaa_df_offline_schema():
-    df = fetch_noaa_df("9414290", "20240101", "20240128", 37.8, -122.5, offline=True)
+    df, _ = fetch_noaa_df("9414290", "20240101", "20240128", 37.8, -122.5, offline=True)
     for col in ("timestamp", "station_id", "water_level", "lat", "lon"):
         assert col in df.columns, f"Missing column: {col}"
+
+
+# ── fail-hard / mock-permission semantics ─────────────────────────────────────
+
+def test_fetch_noaa_live_raises_on_failure_without_allow_mock(monkeypatch):
+    """Live mode (offline=False, allow_mock=False) must raise on any fetch error.
+
+    Reason: silent fallback to mock data would let "real NOAA evaluation"
+    reports advertise metrics that were actually computed from synthetic stand-ins.
+    """
+    import scripts.evaluate_noaa_public as ep
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("simulated network error")
+
+    monkeypatch.setattr(ep, "load_noaa_data", _boom)
+    with pytest.raises(LiveNOAAFetchError, match="Live NOAA fetch failed"):
+        fetch_noaa_df("9414290", "20240101", "20240128", 37.8, -122.5,
+                      offline=False, allow_mock=False)
+
+
+def test_fetch_noaa_live_falls_back_when_allow_mock(monkeypatch):
+    """`--allow-mock` permits a per-station fallback to mock data with a flag."""
+    import scripts.evaluate_noaa_public as ep
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("simulated network error")
+
+    monkeypatch.setattr(ep, "load_noaa_data", _boom)
+    df, prov = fetch_noaa_df("9414290", "20240101", "20240128", 37.8, -122.5,
+                             offline=False, allow_mock=True)
+    assert len(df) > 0
+    assert prov["mock_used"] is True
+    assert prov["reason"] == "live_fetch_failed"
+    assert "error" in prov
+
+
+def test_fetch_noaa_offline_does_not_call_network(monkeypatch):
+    """`offline=True` must never hit `load_noaa_data`."""
+    import scripts.evaluate_noaa_public as ep
+
+    def _should_not_be_called(*args, **kwargs):
+        raise AssertionError("network call attempted in offline mode")
+
+    monkeypatch.setattr(ep, "load_noaa_data", _should_not_be_called)
+    df, prov = fetch_noaa_df("9414290", "20240101", "20240128", 37.8, -122.5,
+                             offline=True, allow_mock=False)
+    assert prov["mock_used"] is True
+    assert prov["reason"] == "offline_mode"
+    assert len(df) > 0
 
 
 def test_make_mock_noaa_df_water_level_numeric():
@@ -155,11 +211,37 @@ def test_main_runs_offline(tmp_path, monkeypatch):
     # Re-import to pick up patched REPORTS_DIR
     ep.REPORTS_DIR = tmp_path
 
-    ep.main()
+    ep.main([])
 
     assert (tmp_path / "noaa_public_metrics.json").exists()
     assert (tmp_path / "noaa_public_metrics.md").exists()
 
     with open(tmp_path / "noaa_public_metrics.json") as f:
         data = json.load(f)
-    assert len(data) >= 5  # five stations + storm period
+    # New schema: _meta + 5 stations + storm = at least 7 top-level keys
+    assert "_meta" in data
+    assert data["_meta"]["offline_mode"] is True
+    assert data["_meta"]["any_mock_used"] is True
+    # Each station record must carry provenance fields
+    station_entries = [v for k, v in data.items() if not k.startswith("_")]
+    assert len(station_entries) >= 5
+    for rec in station_entries:
+        assert rec["data_source"] == "NOAA_COOPS_MOCK"
+        assert rec["mock_used"] is True
+        assert "begin_date" in rec
+        assert "end_date" in rec
+
+
+def test_main_live_mode_hard_fails_when_fetch_breaks(tmp_path, monkeypatch):
+    """Live default mode (no env var, no flag) raises on the first fetch error."""
+    import scripts.evaluate_noaa_public as ep
+
+    monkeypatch.setattr(ep, "REPORTS_DIR", tmp_path)
+    monkeypatch.delenv("NOAA_OFFLINE", raising=False)
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("simulated network outage")
+
+    monkeypatch.setattr(ep, "load_noaa_data", _boom)
+    with pytest.raises(LiveNOAAFetchError):
+        ep.main([])  # no --allow-mock

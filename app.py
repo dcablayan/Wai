@@ -11,6 +11,18 @@ Tabs
   Alerts            — configurable high-water alert detection
   Uncertainty       — conformal prediction interval details
   Benchmark Results — prototype model RMSE on tidecast data
+
+Scientific protocol shown to users
+----------------------------------
+- Persistence baseline is rolling 1-step: pred[t] = observed[t-1]
+  (matches scripts/train_baseline.rolling_persistence_1step). The previous
+  constant-last-train baseline is retained only as a reference floor.
+- Alert thresholds are fit on the *training* window for the selected station
+  (75 % temporal split). The displayed date range is for visualisation only —
+  the threshold never moves with the date filter.
+- "Forecast" labels make the protocol explicit: 1-step forecasts use the most
+  recent observed value as input ("online 1-step"); longer horizons come
+  from the direct multi-horizon evaluation (separate model per horizon).
 """
 
 from __future__ import annotations
@@ -70,7 +82,19 @@ def load_horizon_metrics() -> dict:
 
 @st.cache_data
 def run_forecast(station_id: str, train_frac: float = 0.75):
-    from src.models.baseline import HarmonicRidgeModel, PersistenceModel
+    """Run the dashboard's online 1-step forecast pipeline.
+
+    Returns
+    -------
+    (train_fit, train_cal, test, persist_pred, harmonic_pred, gradboost_pred,
+     harmonic_ci, gb_ci, train_threshold)
+
+    where `persist_pred` is the rolling 1-step persistence (matches
+    `scripts/train_baseline.rolling_persistence_1step`) and `train_threshold`
+    is mean + 2σ fit on the training window only — never on the displayed
+    date range.
+    """
+    from src.models.baseline import HarmonicRidgeModel
     from src.models.gradient_boost import GradBoostModel
     from src.models.conformal import ConformalIntervals
 
@@ -84,8 +108,15 @@ def run_forecast(station_id: str, train_frac: float = 0.75):
     train_cal = sub.iloc[n_train - n_cal:n_train]
     test = sub.iloc[n_train:]
 
-    persist = PersistenceModel().fit(sub.iloc[:n_train]["water_level"])
-    persist_pred = persist.predict(len(test))
+    # Rolling 1-step persistence (matches scripts/train_baseline.py).
+    # pred[0] = last value of full train; pred[t] = test[t-1] thereafter.
+    test_vals = test["water_level"].values
+    train_full = sub.iloc[:n_train]
+    last_train = float(train_full["water_level"].dropna().iloc[-1])
+    persist_pred = np.empty(len(test_vals))
+    if len(test_vals):
+        persist_pred[0] = last_train
+        persist_pred[1:] = test_vals[:-1]
 
     harmonic = HarmonicRidgeModel(alpha=1.0).fit(train_fit)
     harmonic_pred = harmonic.predict_on(test)
@@ -104,7 +135,15 @@ def run_forecast(station_id: str, train_frac: float = 0.75):
     gb_ci = ConformalIntervals(coverage=0.90)
     gb_ci.calibrate(y_cal_h.values, gradboost_cal_pred[-len(y_cal_h):])
 
-    return train_fit, test, persist_pred, harmonic_pred, gradboost_pred, harmonic_ci, gb_ci
+    # Train-window-only alert threshold.
+    train_wl = train_full["water_level"].dropna()
+    train_threshold = float(train_wl.mean() + 2.0 * train_wl.std())
+
+    return (
+        train_fit, train_cal, test,
+        persist_pred, harmonic_pred, gradboost_pred,
+        harmonic_ci, gb_ci, train_threshold,
+    )
 
 
 # ── Sidebar ──────────────────────────────────────────────────────────────────
@@ -198,26 +237,53 @@ with tab_overview:
 # ── Tab 2: Forecasts ──────────────────────────────────────────────────────────
 
 with tab_forecasts:
-    st.header("Forecasts vs Actual (held-out test set)")
+    st.header("Online 1-Step Forecasts vs Actual (held-out test set)")
     st.caption(
-        "Train = first 75% of each station's data. "
-        "Conformal calibration set = last 15% of training data. "
-        "Test = last 25%."
+        "**Protocol:** online 1-step forecasts using the previous observed "
+        "value as the most recent input. Train = first 75 % of each station's "
+        "data; conformal calibration = last 15 % of training. Test = last 25 %. "
+        "No meteorological forcing is supplied to any model, so storm surge is "
+        "*not* modelled."
+    )
+    st.caption(
+        "Longer-horizon forecasts (6 h / 12 h / 24 h) come from direct "
+        "multi-horizon training and are listed in the **Model Comparison** tab."
     )
 
-    show_persist = st.checkbox("Show Persistence baseline", value=True)
+    horizon_choice = st.selectbox(
+        "Horizon",
+        options=["1step_6min", "6h", "12h", "24h"],
+        index=0,
+        help="1-step (6 min) plots online forecasts. Longer horizons jump "
+             "to the direct-forecasting metrics table below.",
+    )
+
+    show_persist = st.checkbox(
+        "Show rolling 1-step persistence baseline", value=True,
+        help="pred[t] = observed[t−1]. Same baseline used in scripts/train_baseline.py.",
+    )
     show_gradboost = st.checkbox("Show GradBoost forecast", value=True)
     show_intervals = st.checkbox("Show 90% conformal intervals (HarmonicRidge)", value=True)
 
     with st.spinner("Running forecasts …"):
         try:
-            train_fit, test, persist_pred, harmonic_pred, gradboost_pred, h_ci, gb_ci = (
-                run_forecast(station_id)
-            )
+            (
+                train_fit, train_cal, test,
+                persist_pred, harmonic_pred, gradboost_pred,
+                h_ci, gb_ci, train_threshold,
+            ) = run_forecast(station_id)
             forecast_ok = True
         except Exception as e:
             st.error(f"Forecast failed: {e}")
             forecast_ok = False
+
+    if forecast_ok and horizon_choice != "1step_6min":
+        st.info(
+            f"Horizon **{horizon_choice}** uses direct forecasting (separate "
+            "model per horizon, no recursive feedback). Metrics are in the "
+            "Model Comparison tab; the time-series plot below shows the "
+            "1-step online forecasts."
+        )
 
     if forecast_ok and _HAS_PLOTLY:
         fig2 = go.Figure()
@@ -241,7 +307,8 @@ with tab_forecasts:
             ))
         fig2.add_trace(go.Scatter(
             x=aligned_test["timestamp"], y=harmonic_pred,
-            name="HarmonicRidge", line=dict(color="#2ca02c", width=1.5, dash="dash"),
+            name="HarmonicRidge (online 1-step)",
+            line=dict(color="#2ca02c", width=1.5, dash="dash"),
         ))
 
         # GradBoost
@@ -249,14 +316,16 @@ with tab_forecasts:
             aligned_test_gb = test.iloc[-len(gradboost_pred):]
             fig2.add_trace(go.Scatter(
                 x=aligned_test_gb["timestamp"], y=gradboost_pred,
-                name="GradBoost", line=dict(color="#9467bd", width=1.5, dash="dot"),
+                name="GradBoost (online 1-step)",
+                line=dict(color="#9467bd", width=1.5, dash="dot"),
             ))
 
-        # Persistence
+        # Rolling 1-step persistence
         if show_persist:
             fig2.add_trace(go.Scatter(
                 x=test["timestamp"], y=persist_pred,
-                name="Persistence", line=dict(color="#d62728", width=1, dash="dot"),
+                name="Persistence (rolling 1-step)",
+                line=dict(color="#d62728", width=1, dash="dot"),
             ))
 
         fig2.update_layout(
@@ -281,17 +350,23 @@ with tab_comparison:
 
     if station_metrics:
         from src.models.branding import DISPLAY_BY_KEY
+
+        def _fmt(val):
+            if val is None or (isinstance(val, float) and np.isnan(val)):
+                return "—"
+            return f"{val:.4f}"
+
         rows = []
         for model_name, m in station_metrics.items():
             if not isinstance(m, dict) or "mae" not in m:
                 continue
             rows.append({
                 "Model": DISPLAY_BY_KEY.get(model_name, model_name),
-                "MAE (m)": f"{m.get('mae', float('nan')):.4f}",
-                "RMSE (m)": f"{m.get('rmse', float('nan')):.4f}",
-                "R²": f"{m.get('r2', float('nan')):.4f}",
-                "NSE": f"{m.get('nse', float('nan')):.4f}",
-                "Corr": f"{m.get('corr', float('nan')):.4f}",
+                "MAE (m)": _fmt(m.get("mae")),
+                "RMSE (m)": _fmt(m.get("rmse")),
+                "R²": _fmt(m.get("r2")),
+                "NSE": _fmt(m.get("nse")),
+                "Corr": _fmt(m.get("corr")),
             })
         if rows:
             st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
@@ -308,23 +383,29 @@ with tab_comparison:
     station_horizon = horizon_metrics.get(station_id, {})
 
     if station_horizon:
+        def _hfmt(val):
+            if val is None or (isinstance(val, float) and np.isnan(val)):
+                return "—"
+            return f"{val:.4f}"
+
         h_rows = []
         for h_name, models in station_horizon.items():
+            if h_name.startswith("_") or not isinstance(models, dict):
+                continue
             for model_name, m in models.items():
+                if model_name.startswith("_"):
+                    continue
                 if not isinstance(m, dict) or "mae" not in m:
                     note = m.get("note", "—") if isinstance(m, dict) else "—"
                     h_rows.append({"Horizon": h_name, "Model": model_name,
                                    "MAE (m)": "—", "RMSE (m)": "—", "R²": note})
                     continue
-                mae = m.get("mae")
-                rmse = m.get("rmse")
-                r2 = m.get("r2")
                 h_rows.append({
                     "Horizon": h_name,
                     "Model": model_name,
-                    "MAE (m)": f"{mae:.4f}" if mae and not np.isnan(mae) else "—",
-                    "RMSE (m)": f"{rmse:.4f}" if rmse and not np.isnan(rmse) else "—",
-                    "R²": f"{r2:.4f}" if r2 is not None and not np.isnan(r2) else "—",
+                    "MAE (m)": _hfmt(m.get("mae")),
+                    "RMSE (m)": _hfmt(m.get("rmse")),
+                    "R²": _hfmt(m.get("r2")),
                 })
         if h_rows:
             st.dataframe(pd.DataFrame(h_rows), use_container_width=True, hide_index=True)
@@ -336,7 +417,20 @@ with tab_comparison:
 
 with tab_alerts:
     st.header("High-Water Alert Detection")
-    st.caption("Alerts are computed on the displayed date range. Thresholds are fit on all station data.")
+    st.caption(
+        "Threshold is fit on the **training window** (first 75 % of each "
+        "station's series) — never on the displayed date range. Changing the "
+        "sidebar date filter only changes what is plotted; the threshold "
+        "stays anchored to the training climatology."
+    )
+
+    # Training window for the selected station — independent of the
+    # displayed filter range.
+    _train_full = sub_all.sort_values("timestamp")
+    _n_train_alert = int(len(_train_full) * 0.75)
+    train_series = _train_full["water_level"].iloc[:_n_train_alert]
+    train_start = _train_full["timestamp"].iloc[0]
+    train_end = _train_full["timestamp"].iloc[_n_train_alert - 1] if _n_train_alert > 0 else _train_full["timestamp"].iloc[-1]
 
     col_a, col_b, col_c = st.columns(3)
     alert_mode = col_a.selectbox(
@@ -346,7 +440,13 @@ with tab_alerts:
         help="std = mean + k·std · absolute = fixed value · percentile = p-th percentile",
     )
     k_val = col_b.slider("k (std multiplier)", 1.0, 4.0, 2.0, 0.25, disabled=(alert_mode != "std"))
-    abs_val = col_b.number_input("Absolute threshold (m)", value=float(sub["water_level"].mean() + 2 * sub["water_level"].std()), disabled=(alert_mode != "absolute"))
+    abs_default = float(train_series.mean() + 2 * train_series.std())
+    abs_val = col_b.number_input(
+        "Absolute threshold (m)",
+        value=abs_default,
+        disabled=(alert_mode != "absolute"),
+        help="Default is mean + 2σ of the training window.",
+    )
     pct_val = col_c.slider("Percentile", 50, 99, 95, disabled=(alert_mode != "percentile"))
 
     from src.alerts import AlertConfig, detect_alerts, compute_threshold
@@ -358,13 +458,20 @@ with tab_alerts:
     else:
         config = AlertConfig(mode="percentile", percentile=float(pct_val))
 
-    threshold = compute_threshold(sub["water_level"], config)
-    alerts = detect_alerts(sub, config)
+    threshold = compute_threshold(train_series, config)
+    alerts = detect_alerts(sub, config, reference_series=train_series)
+
+    st.caption(
+        f"Threshold source: training window for **{station_id}** · "
+        f"{train_start:%Y-%m-%d} → {train_end:%Y-%m-%d} "
+        f"(n_train={len(train_series):,}). "
+        f"Mode={alert_mode}; threshold = **{threshold:.3f} m**."
+    )
 
     col1, col2, col3 = st.columns(3)
-    col1.metric("Alert threshold", f"{threshold:.3f} m")
-    col2.metric("Alert events", len(alerts))
-    col3.metric("Alert rate", f"{100 * len(alerts) / max(len(sub), 1):.1f}%")
+    col1.metric("Alert threshold (train-fit)", f"{threshold:.3f} m")
+    col2.metric("Alerts in displayed range", len(alerts))
+    col3.metric("Alert rate (displayed)", f"{100 * len(alerts) / max(len(sub), 1):.1f}%")
 
     if _HAS_PLOTLY:
         fig_a = go.Figure()
@@ -404,16 +511,22 @@ with tab_alerts:
 with tab_uncertainty:
     st.header("Conformal Prediction Intervals")
     st.caption(
-        "Split-conformal intervals with 90% nominal coverage. "
-        "Calibration set = last 15% of training data. "
-        "Coverage guarantee assumes exchangeability — may be lower for non-stationary series."
+        "Split-conformal intervals with 90 % nominal coverage. qhat uses the "
+        "exact k-th smallest calibration residual (k = ⌈0.9·(n+1)⌉) — the "
+        "finite-sample bound that gives marginal coverage ≥ 90 % under "
+        "exchangeability. Calibration = last 15 % of training; test = held-out "
+        "25 %. Empirical coverage is reported on the **future test split** "
+        "and broken out by event / non-event so users can see where coverage "
+        "degrades."
     )
 
     with st.spinner("Computing conformal intervals …"):
         try:
-            train_fit, test, _, harmonic_pred, gradboost_pred, h_ci, gb_ci = (
-                run_forecast(station_id)
-            )
+            (
+                train_fit, train_cal, test,
+                _persist, harmonic_pred, gradboost_pred,
+                h_ci, gb_ci, train_threshold,
+            ) = run_forecast(station_id)
             ci_ok = True
         except Exception as e:
             st.error(f"Could not compute intervals: {e}")
@@ -424,26 +537,50 @@ with tab_uncertainty:
         aligned_test = test.iloc[-len(harmonic_pred):]
         _, y_test = build_feature_matrix(aligned_test)
         actual_test = y_test.values
-
-        h_lo, h_hi = h_ci.intervals(harmonic_pred)
-        h_cov = h_ci.empirical_coverage(actual_test, harmonic_pred[-len(actual_test):])
+        h_preds_test = harmonic_pred[-len(actual_test):]
+        h_lo, h_hi = h_ci.intervals(h_preds_test)
+        h_report = h_ci.stratified_coverage(
+            actual_test, h_preds_test, event_threshold=train_threshold,
+        )
 
         aligned_test_gb = test.iloc[-len(gradboost_pred):]
         _, y_test_gb = build_feature_matrix(aligned_test_gb)
         actual_test_gb = y_test_gb.values
-        gb_lo, gb_hi = gb_ci.intervals(gradboost_pred)
-        gb_cov = gb_ci.empirical_coverage(actual_test_gb, gradboost_pred[-len(actual_test_gb):])
+        gb_preds_test = gradboost_pred[-len(actual_test_gb):]
+        gb_lo, gb_hi = gb_ci.intervals(gb_preds_test)
+        gb_report = gb_ci.stratified_coverage(
+            actual_test_gb, gb_preds_test, event_threshold=train_threshold,
+        )
 
-        col1, col2 = st.columns(2)
-        col1.metric("HarmonicRidge qhat (±m)", f"±{h_ci.qhat:.4f}")
-        col2.metric("HarmonicRidge empirical coverage", f"{h_cov:.1%}")
-        col3, col4 = st.columns(2)
-        col3.metric("GradBoost qhat (±m)", f"±{gb_ci.qhat:.4f}")
-        col4.metric("GradBoost empirical coverage", f"{gb_cov:.1%}")
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("HarmonicRidge qhat", f"±{h_ci.qhat:.4f} m")
+        col2.metric("HR overall coverage", f"{h_report['coverage_overall']:.1%}")
+        col3.metric(
+            "HR coverage · event",
+            f"{h_report['coverage_event']:.1%}" if not np.isnan(h_report['coverage_event']) else "—",
+        )
+        col4.metric(
+            "HR coverage · non-event",
+            f"{h_report['coverage_non_event']:.1%}" if not np.isnan(h_report['coverage_non_event']) else "—",
+        )
+
+        col5, col6, col7, col8 = st.columns(4)
+        col5.metric("GradBoost qhat", f"±{gb_ci.qhat:.4f} m")
+        col6.metric("GB overall coverage", f"{gb_report['coverage_overall']:.1%}")
+        col7.metric(
+            "GB coverage · event",
+            f"{gb_report['coverage_event']:.1%}" if not np.isnan(gb_report['coverage_event']) else "—",
+        )
+        col8.metric(
+            "GB coverage · non-event",
+            f"{gb_report['coverage_non_event']:.1%}" if not np.isnan(gb_report['coverage_non_event']) else "—",
+        )
 
         st.caption(
-            f"Calibration set size: {h_ci.n_cal} samples. "
-            "Nominal coverage = 90%. Empirical coverage is on the same held-out test period."
+            f"Calibration size n_cal={h_ci.n_cal} · k={h_ci.k} · "
+            f"event threshold (train-fit) = {train_threshold:.3f} m. "
+            f"Event samples in test: {h_report['n_event_samples']} of "
+            f"{h_report['n_samples']}. Nominal coverage = 90 %."
         )
 
         if _HAS_PLOTLY:
@@ -497,20 +634,30 @@ with tab_benchmark:
     if HORIZON_PATH.exists():
         with open(HORIZON_PATH) as f:
             h_data = json.load(f)
+
+        def _bfmt(val):
+            if val is None or (isinstance(val, float) and np.isnan(val)):
+                return "—"
+            return f"{val:.4f}"
+
         h_rows = []
         for sid, horizons in h_data.items():
+            if not isinstance(horizons, dict):
+                continue
             for h_name, models in horizons.items():
+                if h_name.startswith("_") or not isinstance(models, dict):
+                    continue
                 for model_name, m in models.items():
+                    if model_name.startswith("_"):
+                        continue
                     if not isinstance(m, dict) or "mae" not in m:
                         continue
-                    mae = m.get("mae")
-                    rmse = m.get("rmse")
                     h_rows.append({
                         "Station": sid,
                         "Horizon": h_name,
                         "Model": model_name,
-                        "MAE (m)": f"{mae:.4f}" if mae and not np.isnan(mae) else "—",
-                        "RMSE (m)": f"{rmse:.4f}" if rmse and not np.isnan(rmse) else "—",
+                        "MAE (m)": _bfmt(m.get("mae")),
+                        "RMSE (m)": _bfmt(m.get("rmse")),
                     })
         if h_rows:
             st.dataframe(pd.DataFrame(h_rows), use_container_width=True, hide_index=True)

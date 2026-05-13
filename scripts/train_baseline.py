@@ -56,7 +56,12 @@ from src.features.engineering import (
 from src.models.baseline import HarmonicRidgeModel, PersistenceModel, WaveGRUModel
 from src.models.branding import DISPLAY_BY_KEY
 from src.models.gradient_boost import GradBoostModel
-from src.models.metrics import bootstrap_ci, compute_metrics, save_metrics
+from src.models.metrics import (
+    block_bootstrap_ci,
+    bootstrap_ci,
+    compute_metrics,
+    save_metrics,
+)
 from sklearn.linear_model import Ridge
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -175,8 +180,14 @@ def run_ablation(train: pd.DataFrame, test: pd.DataFrame) -> dict:
             pipeline.fit(X_tr, y_tr)
             preds = pipeline.predict(X_te)
             m = compute_metrics(y_te.values, preds)
-            m["mae_ci_95"] = bootstrap_ci(y_te.values, preds, metric="mae")
-            m["rmse_ci_95"] = bootstrap_ci(y_te.values, preds, metric="rmse")
+            block_mae = block_bootstrap_ci(y_te.values, preds, metric="mae")
+            block_rmse = block_bootstrap_ci(y_te.values, preds, metric="rmse")
+            m["mae_block_ci_95"] = block_mae
+            m["rmse_block_ci_95"] = block_rmse
+            m["mae_iid_ci_95"] = bootstrap_ci(y_te.values, preds, metric="mae")
+            m["rmse_iid_ci_95"] = bootstrap_ci(y_te.values, preds, metric="rmse")
+            m["mae_ci_95"] = (block_mae["lower"], block_mae["upper"])
+            m["rmse_ci_95"] = (block_rmse["lower"], block_rmse["upper"])
             m["n_features"] = len(common)
             results[cfg] = m
         except Exception as e:
@@ -216,18 +227,52 @@ def train_station(df_station, station_id: str = ""):
     if station_id:
         save_model_artifact(gradboost, station_id, "grad_boost")
 
-    # Bootstrap 95% CI on MAE for the primary supervised models
+    # Bootstrap 95% CI on MAE/RMSE for the primary supervised models.
+    # Headline interval = moving/circular block bootstrap (handles
+    # residual autocorrelation honestly). IID bootstrap is retained as a
+    # reference baseline (always tighter — useful as a "lower bound").
     from src.features.engineering import build_feature_matrix
     _, y_test_aligned = build_feature_matrix(test)
     h_preds = harmonic.predict_on(test)
     h_preds = h_preds[-len(y_test_aligned):]
-    harmonic_metrics["mae_ci_95"] = bootstrap_ci(y_test_aligned.values, h_preds)
-    harmonic_metrics["rmse_ci_95"] = bootstrap_ci(y_test_aligned.values, h_preds, metric="rmse")
+    harmonic_metrics["mae_block_ci_95"] = block_bootstrap_ci(
+        y_test_aligned.values, h_preds, metric="mae"
+    )
+    harmonic_metrics["rmse_block_ci_95"] = block_bootstrap_ci(
+        y_test_aligned.values, h_preds, metric="rmse"
+    )
+    # IID bootstrap retained for backwards-compatible reporting + as a
+    # transparently-too-tight reference.
+    harmonic_metrics["mae_iid_ci_95"] = bootstrap_ci(y_test_aligned.values, h_preds)
+    harmonic_metrics["rmse_iid_ci_95"] = bootstrap_ci(y_test_aligned.values, h_preds, metric="rmse")
+    # Headline CI for legacy fields uses the block interval.
+    harmonic_metrics["mae_ci_95"] = (
+        harmonic_metrics["mae_block_ci_95"]["lower"],
+        harmonic_metrics["mae_block_ci_95"]["upper"],
+    )
+    harmonic_metrics["rmse_ci_95"] = (
+        harmonic_metrics["rmse_block_ci_95"]["lower"],
+        harmonic_metrics["rmse_block_ci_95"]["upper"],
+    )
 
     gb_preds = gradboost.predict_on(test)
     gb_preds = gb_preds[-len(y_test_aligned):]
-    gradboost_metrics["mae_ci_95"] = bootstrap_ci(y_test_aligned.values, gb_preds)
-    gradboost_metrics["rmse_ci_95"] = bootstrap_ci(y_test_aligned.values, gb_preds, metric="rmse")
+    gradboost_metrics["mae_block_ci_95"] = block_bootstrap_ci(
+        y_test_aligned.values, gb_preds, metric="mae"
+    )
+    gradboost_metrics["rmse_block_ci_95"] = block_bootstrap_ci(
+        y_test_aligned.values, gb_preds, metric="rmse"
+    )
+    gradboost_metrics["mae_iid_ci_95"] = bootstrap_ci(y_test_aligned.values, gb_preds)
+    gradboost_metrics["rmse_iid_ci_95"] = bootstrap_ci(y_test_aligned.values, gb_preds, metric="rmse")
+    gradboost_metrics["mae_ci_95"] = (
+        gradboost_metrics["mae_block_ci_95"]["lower"],
+        gradboost_metrics["mae_block_ci_95"]["upper"],
+    )
+    gradboost_metrics["rmse_ci_95"] = (
+        gradboost_metrics["rmse_block_ci_95"]["lower"],
+        gradboost_metrics["rmse_block_ci_95"]["upper"],
+    )
 
     return {
         "persistence": rolling_metrics,           # rolling 1-step (primary)

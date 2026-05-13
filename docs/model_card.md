@@ -59,27 +59,17 @@ The following claims are testable within this codebase and constitute the scient
 The ablation varies which feature groups are given to HarmonicRidge.
 All results on the temporal holdout (last 25% of data per station).
 
-### DEMO-HNL (Honolulu synthetic)
+Current per-station / per-configuration numbers are **regenerated each run**
+and live in [`reports/ablation_metrics.json`](../reports/ablation_metrics.json)
+plus the rollup at [`reports/summary.json`](../reports/summary.json) — see the
+`ablation` block. README and model card no longer embed these values, so the
+doc never drifts from the artifact.
 
-| Feature set | n features | MAE (m) | RMSE (m) | R² |
-|-------------|-----------|---------|----------|----|
-| harmonics_only | 20 | 0.0178 | 0.0223 | 0.9902 |
-| lags_only | 6 | 0.0194 | 0.0243 | 0.9883 |
-| rolling_only | 6 | 0.0198 | 0.0248 | 0.9878 |
-| harmonics_lags | 26 | 0.0175 | 0.0219 | 0.9905 |
-| **full** | **32** | **0.0168** | **0.0211** | **0.9912** |
-
-### DEMO-SFO (San Francisco synthetic)
-
-| Feature set | n features | MAE (m) | RMSE (m) | R² |
-|-------------|-----------|---------|----------|----|
-| harmonics_only | 20 | 0.0181 | 0.0227 | 0.9980 |
-| lags_only | 6 | 0.0198 | 0.0248 | 0.9976 |
-| rolling_only | 6 | 0.0306 | 0.0380 | 0.9944 |
-| harmonics_lags | 26 | 0.0175 | 0.0219 | 0.9981 |
-| **full** | **32** | **0.0168** | **0.0211** | **0.9983** |
-
-**Takeaway**: Tidal harmonics are the strongest single feature group; lags and rolling statistics provide a small but consistent improvement. Rolling features alone are the weakest single group, and their benefit over lags is station-dependent.
+**Qualitative takeaway** (stable across runs on the synthetic demo data):
+tidal harmonics are the strongest single feature group; lags and rolling
+statistics provide a small but consistent improvement. Rolling features
+alone are the weakest single group, and their benefit over lags is
+station-dependent.
 
 ---
 
@@ -111,12 +101,29 @@ All pipeline metrics reported in `reports/model_metrics.json` and `reports/horiz
 - Direct forecasting: a separate model is trained per horizon
 - Persistence at horizon h: rolling h-step (pred[t] = obs[t-h])
 - WaveGRU is evaluated at 1-step only; iterated prediction is out of scope
+- **Split mask**: training rows use `target_idx = X.index + h < n_train`;
+  test rows use `X.index >= n_train`. Rows whose features sit in the train
+  span but whose targets cross the boundary are excluded from both sets
+  (guarded by `tests/test_horizons.py::test_horizon_train_targets_before_train_cutoff`).
 
 ### NOAA real-observation evaluation
 - Run `python -m scripts.evaluate_noaa_public` (or `NOAA_OFFLINE=1 ...` for CI)
 - Temporal holdout on 28-day windows for 5 geographically diverse stations
 - Storm-period holdout for Honolulu (Jan 2024)
+- Live mode **fails hard** if the NOAA fetch errors; `--allow-mock` is required
+  to substitute mock data per-station. Every record carries `data_source`,
+  `mock_used`, `station_id`, `begin_date`, and `end_date` so no metric can be
+  read as "real NOAA" when it was actually synthetic.
 - Results saved to `reports/noaa_public_metrics.json`
+
+### Event-holdout evaluation
+- Run `python -m scripts.evaluate_events`
+- The synthetic generator places a king tide near day 85 and a storm surge
+  near day 80, so they fall inside the test span of the 75 % split.
+- Threshold = train mean + 2 σ — fit on the training window only.
+- Output: per-station episode metrics (precision, recall, F1, peak-height
+  error, peak-time error, lead-time error) in `reports/event_metrics.json`
+  alongside per-sample MAE/RMSE for context.
 
 ---
 
@@ -130,7 +137,13 @@ All pipeline metrics reported in `reports/model_metrics.json` and `reports/horiz
 | NSE | Nash-Sutcliffe efficiency = R² for point forecasts | Hydrology convention |
 | Precision/Recall | Threshold exceedance classification | Event-level; uses training-split threshold |
 | Peak error | Max \|actual - forecast\| on event steps | Operational relevance |
-| Bootstrap 95% CI | 1000-replicate percentile bootstrap on MAE/RMSE | Reports uncertainty in estimates |
+| Block bootstrap 95% CI | 1000-replicate moving/circular block bootstrap on MAE/RMSE (block length ≈ n^(1/3)) | **Primary** interval; honors residual autocorrelation |
+| IID bootstrap 95% CI | 1000-replicate percentile bootstrap on MAE/RMSE | Reference baseline; always tighter than the block interval |
+| Episode P / R / F1 | Predicted vs observed contiguous threshold-exceedance episodes | Event-level skill |
+| Peak-height error | Mean abs(peak_pred − peak_obs) on matched episodes (m) | Operational extreme skill |
+| Peak-time error | Mean \|t_peak_pred − t_peak_obs\| on matched episodes (s) | Timing accuracy at the peak |
+| Lead-time error | Mean (t_pred_start − t_obs_start), positive = late | Lead/lag of the predicted episode |
+| Stratified conformal coverage | Empirical coverage overall / on event / on non-event | Shows where intervals degrade |
 
 ---
 

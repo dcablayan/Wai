@@ -10,6 +10,8 @@ import pandas as pd
 import pytest
 
 from scripts.evaluate_horizons import (
+    HORIZONS,
+    TRAIN_FRAC,
     build_horizon_features,
     evaluate_persistence_horizon,
     evaluate_sklearn_horizon,
@@ -170,6 +172,94 @@ def test_format_metrics_md_contains_notes():
 
 
 # ── output file integration ───────────────────────────────────────────────────
+
+# ── target-leakage guard ──────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("horizon_steps", [1, 60, 120, 240])
+def test_horizon_train_targets_before_train_cutoff(horizon_steps):
+    """No training-row target may have a timestamp at or after the train cutoff.
+
+    Direct h-step forecasting shifts the label by h. If we only split features
+    by `X.index < n_train`, training rows in [n_train-h, n_train) carry labels
+    in the test span. The fix is `target_idx = X.index + h` for the train mask,
+    plus `X.index >= n_train` for the test mask.
+    """
+    df = _synthetic_df(n=600)
+    df_sorted = df.sort_values("timestamp").reset_index(drop=True)
+    n = len(df_sorted)
+    n_train = int(n * TRAIN_FRAC)
+    train_cutoff_ts = df_sorted["timestamp"].iloc[n_train]
+
+    X, _ = build_horizon_features(df_sorted, horizon_steps=horizon_steps)
+    target_idx = X.index + horizon_steps
+    train_mask = target_idx < n_train
+
+    # Every training row's TARGET timestamp must be strictly before cutoff.
+    train_target_positions = target_idx[train_mask]
+    # All positions must remain inside the original frame
+    assert train_target_positions.max() < n_train, (
+        "train mask leaks: a training target index is >= n_train"
+    )
+    train_target_ts = df_sorted["timestamp"].iloc[train_target_positions]
+    assert (train_target_ts < train_cutoff_ts).all(), (
+        f"Leakage: training rows reference targets at or after the train "
+        f"cutoff ({train_cutoff_ts}). Offending count="
+        f"{int((train_target_ts >= train_cutoff_ts).sum())}"
+    )
+
+
+def test_horizon_test_features_after_train_cutoff():
+    """All test rows must have features at indices >= n_train.
+
+    Uses n=2400 so that even the 24h (240-step) horizon has a non-empty test
+    region. Sizing rationale: n_train = 1800 and (n - h) = 2160 leaves 360
+    test rows at the longest horizon.
+    """
+    df = _synthetic_df(n=2400)
+    df_sorted = df.sort_values("timestamp").reset_index(drop=True)
+    n = len(df_sorted)
+    n_train = int(n * TRAIN_FRAC)
+
+    for h in (1, 60, 120, 240):
+        X, _ = build_horizon_features(df_sorted, horizon_steps=h)
+        test_mask = X.index >= n_train
+        assert test_mask.sum() > 0, f"empty test set at h={h}"
+        assert (X.index[test_mask] >= n_train).all()
+
+
+def test_horizon_boundary_rows_excluded_from_both_sets():
+    """Rows where target crosses the train cutoff land in NEITHER set."""
+    df = _synthetic_df(n=2400)
+    df_sorted = df.sort_values("timestamp").reset_index(drop=True)
+    n = len(df_sorted)
+    n_train = int(n * TRAIN_FRAC)
+
+    h = 60
+    X, _ = build_horizon_features(df_sorted, horizon_steps=h)
+    target_idx = X.index + h
+    train_mask = target_idx < n_train
+    test_mask = X.index >= n_train
+
+    boundary_mask = (X.index < n_train) & (target_idx >= n_train)
+    # Boundary rows must not appear in either train or test
+    assert not (boundary_mask & train_mask).any()
+    assert not (boundary_mask & test_mask).any()
+    # And boundary rows should exist for non-trivial horizons
+    assert boundary_mask.sum() > 0, "expected boundary rows to be present at h=60"
+
+
+def test_station_horizons_reports_split_metadata():
+    """evaluate_station_horizons must emit _split (train cutoff + n) and
+    _split_horizon (per-horizon row counts) so the report is auditable."""
+    df = _synthetic_df(n=2400)
+    results = evaluate_station_horizons(df)
+    assert "_split" in results
+    assert "train_cutoff_ts" in results["_split"]
+    for h in HORIZONS:
+        assert "_split_horizon" in results[h]
+        assert results[h]["_split_horizon"]["n_train_rows"] > 0
+        assert results[h]["_split_horizon"]["n_test_rows"] > 0
+
 
 def test_evaluate_horizons_output_files(tmp_path, monkeypatch):
     """evaluate_horizons.main() should create both output files."""
