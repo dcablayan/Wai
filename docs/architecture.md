@@ -1,5 +1,9 @@
 # Wai Architecture
 
+> **Research Demo Scope** — see [model_card.md](model_card.md) for full
+> limitations, scientific hypotheses, ablation results, and the not-an-operational-system
+> disclaimer.
+
 ## Pipeline Overview
 
 Two parallel data paths feed into modeling and reporting.
@@ -20,15 +24,19 @@ Validation (src/data/validation.py)
 Feature Engineering (src/features/engineering.py)
    │  add_tidal_harmonics()  — sin/cos for 8 constituents (M2, S2, K1, O1, N2, M4, M6, Mm)
    │  add_temporal_covariates() — hour-of-day, lunar-phase sin/cos
-   │  add_lag_features()     — lagged water-level observations
-   │  add_rolling_features() — rolling mean + std at 1hr / 4hr / 24hr windows
+   │  add_lag_features()     — lagged water-level observations (shift >= 1; no leakage)
+   │  add_rolling_features() — rolling mean + std; computed on shift(1) to exclude water_level[t]
    │  build_feature_matrix() — composes X, y dropping NaN rows
    ▼
 Forecasting (src/models/baseline.py)
-   │  PersistenceModel       — ʻAle Kūpaʻa (Steady Wave): last-value naive baseline
-   │  HarmonicRidgeModel     — Nalu Hoʻokani Ridge (Harmonic Wave Ridge): harmonic regression with Ridge
-   │  WaveGRUModel           — Nalu Holo Adapter (Fast Wave Adapter): DataFrame adapter for WaveGRUPrototype
+   │  PersistenceModel (rolling 1-step) — ʻAle Kūpaʻa: primary naive baseline; pred[t]=obs[t-1]
+   │  PersistenceModel (constant)       — constant holdout reference; pred[t]=train[-1]
+   │  HarmonicRidgeModel     — Nalu Hoʻokani Ridge: harmonic regression + Ridge
+   │  WaveGRUModel           — Nalu Holo Adapter: DataFrame adapter for WaveGRUPrototype
+   │  GradBoostModel         — HistGradientBoosting over same feature matrix
    │  compute_metrics()      — MAE, RMSE, R², NSE, Pearson correlation
+   │  compute_event_metrics() — precision/recall/F1/peak-error on threshold exceedances
+   │  bootstrap_ci()         — 1000-replicate percentile CI on MAE/RMSE
    │  save_metrics()         — writes reports/model_metrics.json
    ▼
 Visualization (app.py)

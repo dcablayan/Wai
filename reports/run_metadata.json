@@ -1,0 +1,11 @@
+{
+  "run_at": "2026-05-13T07:03:40.482003+00:00",
+  "git_sha": "c69b3810ffb3",
+  "data_hash": "9e363d7aebd341df",
+  "train_frac": 0.75,
+  "stations": [
+    "DEMO-HNL",
+    "DEMO-SFO"
+  ],
+  "model_version": "0.1.0"
+}

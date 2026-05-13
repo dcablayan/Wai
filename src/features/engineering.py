@@ -86,15 +86,19 @@ def add_rolling_features(
     windows: Optional[List[int]] = None,
     value_col: str = "water_level",
 ) -> pd.DataFrame:
-    """Add rolling mean and std features."""
+    """Add rolling mean and std features.
+
+    The series is shifted by 1 before windowing so that the feature at row t
+    is computed from [t-w, t-1], never including water_level[t] itself.
+    This prevents target leakage when the model predicts water_level[t].
+    """
     df = df.copy()
     if windows is None:
         windows = [10, 40, 240]  # ~1hr, 4hr, 24hr at 6-min resolution
+    shifted = df[value_col].shift(1)
     for w in windows:
-        df[f"{value_col}_rmean{w}"] = df[value_col].rolling(w, min_periods=1).mean()
-        df[f"{value_col}_rstd{w}"] = (
-            df[value_col].rolling(w, min_periods=2).std().fillna(0.0)
-        )
+        df[f"{value_col}_rmean{w}"] = shifted.rolling(w, min_periods=1).mean()
+        df[f"{value_col}_rstd{w}"] = shifted.rolling(w, min_periods=2).std().fillna(0.0)
     return df
 
 

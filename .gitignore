@@ -39,9 +39,11 @@ data/*.csv
 !data/demo/tidecast/*.csv
 !data/demo/tidecast/README.md
 
-# Reports — ignore large generated runs, commit sample outputs
+# Reports — ignore large generated runs and model pickles; commit sample outputs
 reports/*.log
 reports/run_*
+!reports/run_metadata.json
+reports/models/
 
 # macOS
 .DS_Store

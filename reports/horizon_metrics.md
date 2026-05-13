@@ -9,20 +9,20 @@ WaveGRU is a 1-step model and is only evaluated at horizon 1 (6 min).
 | Horizon | Model | MAE (m) | RMSE (m) | R² |
 |---------|-------|---------|----------|----|
 | 1step_6min | persistence | 0.0233 | 0.0293 | 0.9830 |
-| 1step_6min | harmonic_ridge | 0.0169 | 0.0211 | 0.9912 |
-| 1step_6min | grad_boost | 0.0195 | 0.0245 | 0.9882 |
+| 1step_6min | harmonic_ridge | 0.0170 | 0.0212 | 0.9911 |
+| 1step_6min | grad_boost | 0.0195 | 0.0244 | 0.9883 |
 | 1step_6min | wave_gru | 0.0776 | 0.0974 | 0.8124 |
 | 6h | persistence | 0.2784 | 0.3598 | -1.5882 |
-| 6h | harmonic_ridge | 0.0183 | 0.0230 | 0.9892 |
-| 6h | grad_boost | 0.0339 | 0.0463 | 0.9562 |
+| 6h | harmonic_ridge | 0.0184 | 0.0230 | 0.9894 |
+| 6h | grad_boost | 0.0338 | 0.0451 | 0.9593 |
 | 6h | wave_gru | — | — | WaveGRU is a 1-step model; not evaluated at this horizon. |
 | 12h | persistence | 0.2965 | 0.3680 | -1.7624 |
 | 12h | harmonic_ridge | 0.0182 | 0.0228 | 0.9894 |
-| 12h | grad_boost | 0.0338 | 0.0447 | 0.9592 |
+| 12h | grad_boost | 0.0334 | 0.0454 | 0.9579 |
 | 12h | wave_gru | — | — | WaveGRU is a 1-step model; not evaluated at this horizon. |
 | 24h | persistence | 0.0681 | 0.0833 | 0.8582 |
-| 24h | harmonic_ridge | 0.0178 | 0.0223 | 0.9899 |
-| 24h | grad_boost | 0.0219 | 0.0283 | 0.9837 |
+| 24h | harmonic_ridge | 0.0178 | 0.0223 | 0.9898 |
+| 24h | grad_boost | 0.0210 | 0.0268 | 0.9854 |
 | 24h | wave_gru | — | — | WaveGRU is a 1-step model; not evaluated at this horizon. |
 
 ## Station: DEMO-SFO
@@ -30,20 +30,20 @@ WaveGRU is a 1-step model and is only evaluated at horizon 1 (6 min).
 | Horizon | Model | MAE (m) | RMSE (m) | R² |
 |---------|-------|---------|----------|----|
 | 1step_6min | persistence | 0.0289 | 0.0360 | 0.9950 |
-| 1step_6min | harmonic_ridge | 0.0167 | 0.0210 | 0.9983 |
-| 1step_6min | grad_boost | 0.0216 | 0.0270 | 0.9972 |
+| 1step_6min | harmonic_ridge | 0.0168 | 0.0211 | 0.9983 |
+| 1step_6min | grad_boost | 0.0215 | 0.0270 | 0.9972 |
 | 1step_6min | wave_gru | 0.2224 | 0.2593 | 0.7407 |
 | 6h | persistence | 0.7731 | 0.9174 | -2.2654 |
-| 6h | harmonic_ridge | 0.0178 | 0.0223 | 0.9980 |
-| 6h | grad_boost | 0.0470 | 0.0606 | 0.9854 |
+| 6h | harmonic_ridge | 0.0179 | 0.0224 | 0.9981 |
+| 6h | grad_boost | 0.0486 | 0.0631 | 0.9846 |
 | 6h | wave_gru | — | — | WaveGRU is a 1-step model; not evaluated at this horizon. |
 | 12h | persistence | 0.4896 | 0.6115 | -0.5038 |
 | 12h | harmonic_ridge | 0.0181 | 0.0227 | 0.9979 |
-| 12h | grad_boost | 0.0417 | 0.0526 | 0.9889 |
+| 12h | grad_boost | 0.0422 | 0.0534 | 0.9885 |
 | 12h | wave_gru | — | — | WaveGRU is a 1-step model; not evaluated at this horizon. |
 | 24h | persistence | 0.1626 | 0.1923 | 0.8529 |
-| 24h | harmonic_ridge | 0.0186 | 0.0233 | 0.9978 |
-| 24h | grad_boost | 0.0321 | 0.0426 | 0.9927 |
+| 24h | harmonic_ridge | 0.0186 | 0.0232 | 0.9979 |
+| 24h | grad_boost | 0.0295 | 0.0382 | 0.9942 |
 | 24h | wave_gru | — | — | WaveGRU is a 1-step model; not evaluated at this horizon. |
 
 ## Notes

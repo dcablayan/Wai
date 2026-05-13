@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11"]
+        python-version: ["3.10", "3.11", "3.12"]
 
     steps:
       - uses: actions/checkout@v4
@@ -25,25 +25,40 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: ${{ runner.os }}-pip-
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-${{ matrix.python-version }}-
 
       - name: Install dependencies
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
+          pip install pytest-cov
 
       - name: Generate demo data
         run: python -m scripts.prepare_demo_data
 
-      - name: Train baseline models
+      - name: Train baseline models (+ ablation + artifacts)
         run: python -m scripts.train_baseline
+
+      - name: Multi-horizon evaluation
+        run: python -m scripts.evaluate_horizons
+
+      - name: Prototype benchmark (tidecast data)
+        run: python -m scripts.run_benchmark
 
       - name: Generate HTML reports
         run: python -m scripts.generate_report
 
-      - name: Run tests
-        run: pytest tests/ -v --tb=short
+      - name: NOAA public evaluation (offline mode — no network calls)
+        env:
+          NOAA_OFFLINE: "1"
+        run: python -m scripts.evaluate_noaa_public
+
+      - name: Dashboard import smoke test
+        run: python -c "import app; print('app.py imports OK')"
+
+      - name: Run tests with coverage
+        run: pytest tests/ -v --tb=short --cov=src --cov=scripts --cov-report=term-missing --cov-fail-under=70
 
       - name: Upload reports as artifacts
         uses: actions/upload-artifact@v4
