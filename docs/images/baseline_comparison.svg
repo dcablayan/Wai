@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="430" viewBox="0 0 920 430" role="img" aria-label="Baseline comparison">
+  <style>
+    .title { font: 700 20px Arial, sans-serif; fill: #1f2933; }
+    .subtitle { font: 12px Arial, sans-serif; fill: #52606d; }
+    .axis { stroke: #7b8794; stroke-width: 1; }
+    .grid { stroke: #d9e2ec; stroke-width: 1; }
+    .tick { font: 11px Arial, sans-serif; fill: #52606d; }
+    .label { font: 12px Arial, sans-serif; fill: #334e68; }
+    .legend { font: 12px Arial, sans-serif; fill: #243b53; }
+  </style>
+  <rect width="920" height="430" fill="#ffffff"/>
+  <text x="70" y="30" class="title">Baseline comparison</text>
+  <text x="70" y="49" class="subtitle">Average 1-step synthetic MAE across demo stations; lower is better</text>
+  <line x1="70" x2="892" y1="348.0" y2="348.0" class="grid"/>
+  <text x="60" y="352.0" text-anchor="end" class="tick">0.000</text>
+  <line x1="70" x2="892" y1="278.0" y2="278.0" class="grid"/>
+  <text x="60" y="282.0" text-anchor="end" class="tick">0.044</text>
+  <line x1="70" x2="892" y1="208.0" y2="208.0" class="grid"/>
+  <text x="60" y="212.0" text-anchor="end" class="tick">0.087</text>
+  <line x1="70" x2="892" y1="138.0" y2="138.0" class="grid"/>
+  <text x="60" y="142.0" text-anchor="end" class="tick">0.131</text>
+  <line x1="70" x2="892" y1="68.0" y2="68.0" class="grid"/>
+  <text x="60" y="72.0" text-anchor="end" class="tick">0.174</text>
+  <line x1="70" x2="70" y1="68" y2="348" class="axis"/>
+  <line x1="70" x2="892" y1="348" y2="348" class="axis"/>
+  <text x="18" y="208.0" class="label" transform="rotate(-90 18 208.0)">MAE (m)</text>
+  <rect x="393.0" y="305.9" width="34.3" height="42.1" fill="#d62728"/>
+  <text x="410.2" y="300.9" text-anchor="middle" class="tick">0.026</text>
+  <rect x="437.0" y="319.5" width="34.3" height="28.5" fill="#2ca02c"/>
+  <text x="454.2" y="314.5" text-anchor="middle" class="tick">0.018</text>
+  <rect x="481.0" y="312.9" width="34.3" height="35.1" fill="#9467bd"/>
+  <text x="498.2" y="307.9" text-anchor="middle" class="tick">0.022</text>
+  <rect x="525.0" y="104.5" width="34.3" height="243.5" fill="#8c564b"/>
+  <text x="542.2" y="99.5" text-anchor="middle" class="tick">0.151</text>
+  <text x="481.0" y="378" text-anchor="middle" class="tick">1-step</text>
+  <rect x="70" y="395" width="14" height="14" fill="#d62728"/>
+  <text x="90" y="406" class="legend">Rolling persistence</text>
+  <rect x="220" y="395" width="14" height="14" fill="#2ca02c"/>
+  <text x="240" y="406" class="legend">HarmonicRidge</text>
+  <rect x="370" y="395" width="14" height="14" fill="#9467bd"/>
+  <text x="390" y="406" class="legend">GradBoost</text>
+  <rect x="520" y="395" width="14" height="14" fill="#8c564b"/>
+  <text x="540" y="406" class="legend">WaveGRU</text>
+</svg>

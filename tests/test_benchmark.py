@@ -52,6 +52,15 @@ def test_benchmark_station_rmse_are_finite():
         assert score >= 0.0, f"{name} returned negative RMSE"
 
 
+def test_benchmark_station_is_deterministic():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        csv_path = Path(tmpdir) / "demo-station_tidecast.csv"
+        _write_tidecast_csv(csv_path, n=300)
+        first = benchmark_station(csv_path)
+        second = benchmark_station(csv_path)
+    assert first == pytest.approx(second)
+
+
 def test_benchmark_station_too_short_returns_empty():
     with tempfile.TemporaryDirectory() as tmpdir:
         csv_path = Path(tmpdir) / "short_tidecast.csv"
