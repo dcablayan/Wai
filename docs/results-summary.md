@@ -13,3 +13,5 @@ Small summary table for portfolio review. Lower error is better.
 | NOAA tidal prediction, 0.0404 avg MAE | Hybrid residual Ridge, 0.0430 avg MAE | 1-step mock holdout | Did not improve; worse than NOAA prediction | NOAA mock eval | Mock fixture, not live NOAA proof |
 | Tidecast last-value persistence, 0.222 avg RMSE | TinyTide, 0.222 avg RMSE | 1-step tidecast | Tied, no clear improvement | Tidecast prototype benchmark | Smooth NOAA-derived predictions, not observations |
 | 90% nominal conformal interval | HarmonicRidge split-conformal | 1-step | Overall coverage slightly below nominal | Synthetic conformal | Event coverage degraded, especially on `DEMO-HNL` |
+| Mock/live artifact boundary | Scientific evidence audit | Report integrity | Improved; missing live proof is explicit | `reports/scientific_evidence_audit.*` | Guardrail only, not a performance result |
+| Tide/lag feature set | Optional meteorological forcing columns | Future live/model runs | Infrastructure improved; surge skill still unvalidated | Feature pipeline/tests | Needs real wind, pressure, rain, or wave data |

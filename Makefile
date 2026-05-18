@@ -1,4 +1,4 @@
-.PHONY: setup demo-data train benchmark report horizons events rolling-origin conformal noaa-eval dashboard test coverage summary visuals demo
+.PHONY: setup demo-data train benchmark report horizons events rolling-origin conformal noaa-eval noaa-eval-offline dashboard test coverage summary visuals scientific-audit demo
 
 setup:
 	pip install -r requirements.txt
@@ -39,6 +39,9 @@ summary:
 visuals:
 	python -m scripts.generate_research_visuals
 
+scientific-audit:
+	python -m scripts.audit_scientific_evidence
+
 dashboard:
 	python -m scripts.run_dashboard
 
@@ -48,5 +51,5 @@ test:
 coverage:
 	python -m scripts.run_coverage
 
-demo: demo-data train report benchmark horizons events rolling-origin conformal noaa-eval-offline visuals summary
+demo: demo-data train report benchmark horizons events rolling-origin conformal noaa-eval-offline visuals scientific-audit summary
 	@echo "Demo pipeline complete. Run 'make dashboard' to view the dashboard."
