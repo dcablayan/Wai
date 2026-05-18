@@ -40,6 +40,25 @@ not presented as real NOAA performance.
 `reports/summary.json` indexes these as `synthetic`, `tidecast`,
 `noaa_mock`, and `noaa_live`.
 
+## Research Answer
+
+The current checked-in artifacts answer the portfolio question narrowly:
+
+- On the **synthetic** benchmark, HarmonicRidge improves over rolling
+  persistence at every evaluated horizon.
+- On **rolling-origin synthetic** folds, HarmonicRidge improves in all six
+  forward-in-time folds.
+- On the **tidecast prototype** benchmark, TinyTide ties persistence rather
+  than clearly beating it.
+- On **NOAA mock** fixtures, hybrid residual Ridge does **not** beat the NOAA
+  tidal prediction baseline. That is a mock/plumbing result, not live NOAA
+  evidence.
+
+Start with [docs/research-report.md](docs/research-report.md), then use
+[docs/results-summary.md](docs/results-summary.md) for a compact table and
+[docs/portfolio-case-study.md](docs/portfolio-case-study.md) for interview
+framing.
+
 ## Models and Baselines
 
 - `rolling_persistence`: one-step naive baseline, `pred[t] = observed[t-1]`.
@@ -71,8 +90,19 @@ make dashboard
 ```
 
 `make demo` regenerates the synthetic, tidecast, NOAA mock, rolling-origin,
-conformal, and summary artifacts. The dashboard is a local Streamlit viewer
-for the synthetic demo data.
+conformal, research visual, and summary artifacts. The dashboard is a local
+Streamlit viewer for the synthetic demo data.
+
+Generated research visuals are written to [docs/images](docs/images):
+
+- `actual_vs_predicted.svg`
+- `error_by_horizon.svg`
+- `baseline_comparison.svg`
+- `residual_plot.svg`
+
+`make dashboard` starts Streamlit when localhost port binding is available.
+In sandboxed environments that block local servers, it runs a dashboard smoke
+check instead so the reproducible path still verifies the dashboard data flow.
 
 Run a live NOAA evaluation only when network access is available:
 
