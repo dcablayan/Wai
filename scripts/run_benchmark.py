@@ -15,6 +15,7 @@ Output
 
 from __future__ import annotations
 
+import random
 import sys
 from pathlib import Path
 
@@ -43,6 +44,7 @@ def benchmark_station(path: Path) -> dict[str, float]:
         return {}
     train, val, test = temporal_split(windows)
     fit_windows = train + val
+    random.seed(42)
 
     actual = [w["target_value"] for w in test]
     persistence_pred = [w["values"][-1] for w in test]
@@ -56,7 +58,10 @@ def benchmark_station(path: Path) -> dict[str, float]:
         "WaveGRU": WaveGRUPrototype(lookback=LOOKBACK),
         "SurgeNet": SurgeNetPrototype(lookback=LOOKBACK),
     }
-    results.update({name: model.fit(fit_windows).evaluate(test) for name, model in models.items()})
+    results.update({
+        name: model.fit(list(fit_windows)).evaluate(test)
+        for name, model in models.items()
+    })
     return results
 
 
