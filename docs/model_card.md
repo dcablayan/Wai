@@ -11,10 +11,10 @@
 | Version | 0.1.0 |
 | Task | Short-term station-level water-level regression |
 | Hybrid definition | Physics-informed tidal structure plus statistical/ML residual learning |
-| Main inputs | UTC timestamps, tidal harmonics, lagged observations, rolling statistics, optional NOAA tidal prediction baseline |
+| Main inputs | UTC timestamps, tidal harmonics, lagged observations, rolling statistics, optional external forcing covariates, optional NOAA tidal prediction baseline |
 | Main outputs | Water-level point forecasts and split-conformal intervals |
 | Dependencies | numpy, pandas, scikit-learn, statsmodels, Streamlit/Plotly for dashboard |
-| Explicitly excluded | Heavy deep-learning dependencies, real-time operations, meteorological surge forcing |
+| Explicitly excluded | Heavy deep-learning dependencies, real-time operations, validated meteorological surge forecasting |
 
 ## Intended Use
 
@@ -60,6 +60,7 @@ computed current statement.
 | `data/demo/tidecast/*.csv` | NOAA-derived tidal predictions | Smooth deterministic tidal signal, not observations |
 | NOAA CO-OPS live API | Public API | Observations and NOAA predictions fetched on demand, not stored |
 | NOAA mock fixtures | Generated in `scripts/evaluate_noaa_public.py` | Offline CI fixtures, never real performance evidence |
+| Optional meteorological covariates | User-supplied columns | Supported feature inputs when present; not included in checked-in reports |
 
 ## Evaluation Protocols
 
@@ -78,6 +79,8 @@ NOAA output files are intentionally separate:
 - `reports/noaa_live_metrics.*`: live only; fails if any record has
   `mock_used=true`.
 - `reports/noaa_allow_mock_metrics.*`: explicit mixed fallback runs.
+- `reports/scientific_evidence_audit.*`: claim-boundary audit for live NOAA,
+  mock, operational, and meteorological forcing status.
 
 ## Metrics
 
@@ -97,8 +100,9 @@ NOAA output files are intentionally separate:
    deterministic harmonic output.
 3. NOAA live windows are short and do not establish seasonal or operational
    robustness.
-4. No wind, pressure, rainfall, waves, or atmospheric forecast inputs are used,
-   so storm surge cannot be predicted from first principles.
+4. The feature pipeline can accept optional wind, pressure, rainfall, and wave
+   covariates, but no checked-in evaluation supplies real forcing data. Storm
+   surge skill is not validated.
 5. `WaveGRUPrototype` is a smoothing heuristic, not a real GRU.
 6. `SurgeNetPrototype` is a residual heuristic, not meteorological surge
    modeling.

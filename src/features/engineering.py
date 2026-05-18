@@ -104,8 +104,25 @@ def add_rolling_features(
 
 NON_FEATURE_COLS = {
     "timestamp", "station_id", "datum", "units", "lat", "lon", "source",
-    "_source_row",
+    "_source_row", "observed_water_level", "observation_source",
+    "_target_h", "noaa_prediction", "prediction_source",
 }
+
+
+def feature_columns(df: pd.DataFrame, target_col: str = "water_level") -> list[str]:
+    """Return numeric, non-target columns used by tabular models.
+
+    The matrix may include externally supplied meteorological covariates such
+    as wind speed or pressure when they are present and numeric. Known NOAA
+    comparison fields stay excluded so a baseline column cannot leak into the
+    generic harmonic model by accident.
+    """
+    return [
+        c for c in df.columns
+        if c not in NON_FEATURE_COLS
+        and c != target_col
+        and pd.api.types.is_numeric_dtype(df[c])
+    ]
 
 
 def build_feature_frame(
@@ -137,8 +154,5 @@ def build_feature_matrix(
     """Build (X, y) from a single-station time series."""
     df = build_feature_frame(df, target_col=target_col)
 
-    feature_cols = [
-        c for c in df.columns
-        if c not in NON_FEATURE_COLS and c != target_col
-    ]
+    feature_cols = feature_columns(df, target_col=target_col)
     return df[feature_cols], df[target_col]

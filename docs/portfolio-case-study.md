@@ -16,6 +16,11 @@ I built a reproducible research demo with separated evidence tracks:
 - A tidecast prototype benchmark with a persistence comparator.
 - NOAA mock and live evaluation paths that keep mock artifacts separate from
   real NOAA output.
+- A scientific evidence audit that marks missing live NOAA proof as an open
+  status instead of blending it with mock results.
+- A forcing-ready feature contract for future wind, pressure, rainfall, and
+  wave covariates, with tests that keep NOAA prediction baselines out of the
+  generic model feature matrix.
 - A Streamlit dashboard for inspecting forecasts, uncertainty, alerts, and
   benchmark tables.
 - Generated research figures and summary docs for portfolio review.
@@ -36,6 +41,11 @@ The NOAA mock track did not show a hybrid win over NOAA tidal prediction,
 which is an important honest result: the project reports losses when the
 baseline wins.
 
+The latest audit work reduces ambiguity around the remaining gaps. The repo
+now has a checked-in scientific evidence audit, plus feature support for
+external meteorological covariates. It still does not claim live operational
+NOAA skill or validated storm-surge prediction.
+
 ## Why It Matters
 
 The project demonstrates research discipline: temporal splits, baseline
@@ -52,9 +62,10 @@ pytest-cov, Make, SVG report generation, NOAA CO-OPS public API integration.
 ## Honest Limitations
 
 - Synthetic and mock metrics are not operational NOAA proof.
-- No meteorological forcing is included, so storm surge is not modeled from
-  physical drivers.
-- No live NOAA artifact is checked into this snapshot.
+- Meteorological forcing is supported as optional numeric covariates, but no
+  checked-in benchmark uses real forcing data.
+- No verified live NOAA metrics artifact is checked into this snapshot; the
+  audit reports that gap explicitly.
 - The model set is intentionally lightweight; no deep learning is claimed.
 - Conformal interval coverage degraded on event samples.
 - The station count is too small for claims about broad coastal

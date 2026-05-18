@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "generated_by": "scripts/audit_scientific_evidence.py",
+  "operational_claim_status": {
+    "status": "guarded",
+    "operational_noaa_proof": false,
+    "allowed_claim": "Synthetic and mock reports are reproducibility and plumbing evidence only.",
+    "disallowed_claim": "Do not present synthetic or NOAA mock metrics as operational NOAA forecast performance."
+  },
+  "noaa_live_evidence": {
+    "status": "missing_live_noaa_metrics",
+    "artifact": "reports/noaa_live_metrics.json",
+    "verified_live": false,
+    "mock_used": null,
+    "reason": "No checked-in noaa_live_metrics.json artifact.",
+    "next_step": "Run `python -m scripts.evaluate_noaa_public` with network access."
+  },
+  "meteorological_forcing": {
+    "status": "supported_not_validated",
+    "supported_columns": [
+      "wind_speed_mps",
+      "wind_direction_deg",
+      "air_pressure_hpa",
+      "rainfall_mm",
+      "wave_height_m"
+    ],
+    "feature_pipeline": "Numeric supported forcing columns are included by the tabular feature matrix when present.",
+    "checked_in_reports_use_forcing": false,
+    "validated_storm_surge_skill": false,
+    "reason": "The checked-in synthetic, tidecast, NOAA mock, and NOAA live artifacts do not include real meteorological covariates."
+  },
+  "remaining_scientific_weaknesses": [
+    {
+      "weakness": "Operational NOAA proof",
+      "status": "not_established",
+      "current_control": "Mock and live reports have separate filenames and mock flags.",
+      "needed_to_close": "Verified live NOAA metrics over representative windows."
+    },
+    {
+      "weakness": "Meteorological/storm-surge validation",
+      "status": "partially_addressed",
+      "current_control": "Feature schema accepts external forcing columns.",
+      "needed_to_close": "Real wind/pressure/wave/rain covariates and event validation."
+    },
+    {
+      "weakness": "Checked-in live NOAA artifact",
+      "status": "open",
+      "current_control": "missing_live_noaa_metrics",
+      "needed_to_close": "Run `python -m scripts.evaluate_noaa_public` with network access."
+    }
+  ]
+}
