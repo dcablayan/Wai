@@ -51,7 +51,7 @@ from src.features.engineering import (
     add_rolling_features,
     add_temporal_covariates,
     add_tidal_harmonics,
-    NON_FEATURE_COLS,
+    feature_columns,
 )
 from src.models.baseline import HarmonicRidgeModel, PersistenceModel, WaveGRUModel
 from src.models.branding import DISPLAY_BY_KEY
@@ -156,8 +156,7 @@ def _build_ablation_X(df: pd.DataFrame, config: str, target_col: str = "water_le
         raise ValueError(f"Unknown ablation config: {config!r}")
 
     df = df.dropna().reset_index(drop=True)
-    exclude = set(NON_FEATURE_COLS) | {target_col}
-    feature_cols = [c for c in df.columns if c not in exclude]
+    feature_cols = feature_columns(df, target_col=target_col)
     return df[feature_cols], df[target_col]
 
 

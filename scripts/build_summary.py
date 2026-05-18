@@ -380,6 +380,9 @@ def build_summary() -> dict:
         "noaa_allow_mock": _noaa_summary(
             _read_json(REPORTS_DIR / "noaa_allow_mock_metrics.json")
         ),
+        "scientific_evidence_audit": _read_json(
+            REPORTS_DIR / "scientific_evidence_audit.json"
+        ),
     }
     return summary
 

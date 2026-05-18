@@ -47,16 +47,21 @@ very short horizons (< 1 hour). If any model cannot beat it, it is not useful.
   `dcablayan/tideformer` prototype helpers)
 - Lagged water-level observations at 6, 12, 24, 60, 120, 240 minutes
 - Rolling mean and std at 1-hour, 4-hour, and 24-hour windows
+- Optional numeric external forcing columns when supplied, including
+  `wind_speed_mps`, `wind_direction_deg`, `air_pressure_hpa`, `rainfall_mm`,
+  and `wave_height_m`
 
 **Why it works**: The dominant tidal signal is well-approximated by a small
 set of sinusoids. Lags capture short-range autocorrelation that the harmonics
-miss (e.g. storm surge). Temporal covariates improve diurnal phasing.
+miss (e.g. non-tidal residual excursions). Temporal covariates improve diurnal
+phasing.
 Ridge shrinks noisy feature coefficients.
 
 **Limitations**:
 - Purely linear — cannot model interaction effects.
 - Lag features introduce data-leakage risk if horizon > lag depth.
-- Cannot forecast storm surge from first principles (no atmospheric input).
+- Checked-in reports cannot validate storm-surge skill because they do not
+  include real atmospheric or wave inputs.
 - Demo data is synthetic; real-world RMSE will differ significantly.
 
 ---
@@ -229,7 +234,19 @@ forcing or surge component.
 
 ---
 
-### 8. High-Water Alert Detection (`src/alerts.py`)
+### 8. Optional Meteorological Forcing Columns (`src/features/meteorology.py`)
+
+The tabular feature builder accepts numeric external forcing columns when a
+caller supplies them: `wind_speed_mps`, `wind_direction_deg`,
+`air_pressure_hpa`, `rainfall_mm`, and `wave_height_m`.
+
+**Limitations**: This is feature support, not validation. The checked-in
+synthetic, tidecast, NOAA mock, and NOAA live reports do not include real
+forcing covariates, so storm-surge performance remains unproven.
+
+---
+
+### 9. High-Water Alert Detection (`src/alerts.py`)
 
 Three configurable threshold modes:
 - `'std'` — mean + k × std_dev (configurable k; default 2.0)
@@ -244,7 +261,7 @@ to seasonal sea-level variation or long-term trends.
 
 ---
 
-### 9. Spatial Interpolation (`src/features/spatial.py`)
+### 10. Spatial Interpolation (`src/features/spatial.py`)
 
 Inverse-distance weighting (IDW) across stations with valid lat/lon
 coordinates. Only applicable when two or more stations are available.
@@ -266,5 +283,6 @@ designed for extrapolation beyond the station network. Coastal geometry
   reasonable starting points, not optimised values.
 - Prototype models (WaveGRU, TinyTide, etc.) are 1-step algorithms; they are
   not evaluated at multi-step horizons in the current implementation.
-- Advanced deep learning (LSTM, Transformer) and meteorological surge modeling
-  are intentionally excluded to keep the repo lightweight and honest.
+- Advanced deep learning (LSTM, Transformer) and validated meteorological
+  surge modeling are intentionally excluded to keep the repo lightweight and
+  honest.

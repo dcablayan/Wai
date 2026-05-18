@@ -19,7 +19,9 @@ and 0.0297 m at 12 h versus 0.4050 m for persistence.
 
 That is not operational NOAA evidence. On NOAA mock fixtures, the NOAA tidal
 prediction baseline remained better than the hybrid residual Ridge model on
-average. There is no checked-in NOAA live report in this snapshot.
+average. There is no checked-in NOAA live metrics artifact in this snapshot;
+`reports/scientific_evidence_audit.*` records that as an open evidence gap
+instead of allowing mock output to stand in for live proof.
 
 ## Hypothesis
 
@@ -36,6 +38,7 @@ horizon where persistence is already strong.
 | Tidecast benchmark | NOAA-derived tidal predictions | Do pure-Python prototypes beat persistence on smooth tidal predictions? | No |
 | NOAA mock evaluation | Synthetic fixtures shaped like NOAA API output | Does the NOAA merge/eval/report path work offline? | No |
 | NOAA live evaluation | NOAA observations plus NOAA predictions | Real-data baseline comparison when run with network access | Potentially, but no live artifact is checked in here |
+| Scientific evidence audit | Current checked-in reports | Are the live NOAA, mock, operational, and forcing boundaries explicit? | No; it is a guardrail, not a performance result |
 
 ## Baselines
 
@@ -52,6 +55,10 @@ horizon where persistence is already strong.
 - `grad_boost`: scikit-learn gradient boosting over the same engineered
   feature set.
 - `hybrid_residual_ridge`: NOAA prediction plus Ridge-modeled residual.
+- Optional forcing columns: the tabular feature pipeline can use numeric
+  `wind_speed_mps`, `wind_direction_deg`, `air_pressure_hpa`, `rainfall_mm`,
+  and `wave_height_m` columns when supplied. The checked-in reports do not
+  supply those covariates.
 - Prototype benchmark models: lightweight pure-Python ideas. `WaveGRU` is a
   smoothing heuristic, not a real GRU or deep-learning model.
 
@@ -103,6 +110,10 @@ hybrid residual model was worse than the NOAA baseline in that offline fixture.
 This is still useful because it proves the eval code is not biased toward
 declaring wins.
 
+The scientific audit does not add a win. It adds guardrails: live NOAA metrics
+must be generated as `reports/noaa_live_metrics.*` with `mock_used=false`, and
+the absence of that artifact is reported as `missing_live_noaa_metrics`.
+
 Conformal coverage did not perfectly hit 90% on event samples. HarmonicRidge
 overall coverage was 87.5% on `DEMO-HNL` and 89.0% on `DEMO-SFO`, while event
 coverage was lower. That is a scientific weakness, not a dashboard bug.
@@ -128,9 +139,11 @@ last observed value. That explains the large synthetic gains at 6 h and 12 h.
 - Tidecast data is deterministic tidal prediction output, not gauge
   observations.
 - NOAA mock is a CI/offline fixture, not real NOAA performance.
-- No live NOAA report is checked in with this snapshot.
-- No model uses wind, pressure, rainfall, waves, or atmospheric forecasts, so
-  storm surge cannot be predicted from first principles.
+- No verified live NOAA metrics artifact is checked in with this snapshot; the
+  scientific audit makes that explicit.
+- The feature pipeline now accepts optional meteorological covariates, but no
+  checked-in benchmark supplies real wind, pressure, rainfall, wave, or
+  atmospheric forecast inputs. Storm-surge skill is therefore not validated.
 - The station set is tiny and station-specific; there is no demonstrated
   spatial generalization.
 - Conformal intervals rely on exchangeability, which tidal time series can
@@ -145,6 +158,7 @@ make demo
 make test
 make coverage
 make dashboard
+make scientific-audit
 ```
 
 `make dashboard` starts a local Streamlit server and is meant to be stopped
