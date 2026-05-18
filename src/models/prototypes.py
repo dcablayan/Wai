@@ -81,6 +81,7 @@ class TinyTidePrototype:
     def fit(self, windows: List[Window]) -> "TinyTidePrototype":
         if not windows:
             return self
+        windows = list(windows)
         scale = 1.0 / max(len(windows), 1)
         for _ in range(self.epochs):
             random.shuffle(windows)
