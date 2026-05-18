@@ -36,6 +36,7 @@ not presented as real NOAA performance.
 | Tidecast prototype benchmark | `data/demo/tidecast/*.csv` NOAA-derived tidal predictions | Compare lightweight prototypes and persistence on a smooth tidal signal | `reports/benchmark_results.md` |
 | NOAA mock evaluation | Synthetic fixtures shaped like NOAA API output | CI/offline check of NOAA evaluation code | `reports/noaa_mock_metrics.json`, `.md` |
 | NOAA live evaluation | Public NOAA CO-OPS observations merged to NOAA predictions | Real-data baseline comparison when network access is available | `reports/noaa_live_metrics.json`, `.md` |
+| Scientific evidence audit | Current checked-in reports | Machine-readable guardrail for live NOAA, mock, and forcing claims | `reports/scientific_evidence_audit.json`, `.md` |
 
 `reports/summary.json` indexes these as `synthetic`, `tidecast`,
 `noaa_mock`, and `noaa_live`.
@@ -90,8 +91,8 @@ make dashboard
 ```
 
 `make demo` regenerates the synthetic, tidecast, NOAA mock, rolling-origin,
-conformal, research visual, and summary artifacts. The dashboard is a local
-Streamlit viewer for the synthetic demo data.
+conformal, research visual, scientific audit, and summary artifacts. The
+dashboard is a local Streamlit viewer for the synthetic demo data.
 
 Generated research visuals are written to [docs/images](docs/images):
 
@@ -119,6 +120,18 @@ python -m scripts.evaluate_noaa_public --offline
 NOAA_OFFLINE=1 python -m scripts.evaluate_noaa_public
 ```
 
+Run the evidence audit after any report changes:
+
+```bash
+python -m scripts.audit_scientific_evidence
+```
+
+The audit currently records that the repo is forcing-ready but not
+storm-surge-validated: numeric external columns such as `wind_speed_mps`,
+`air_pressure_hpa`, `rainfall_mm`, and `wave_height_m` are accepted by the
+feature matrix when supplied, but checked-in reports do not include real
+meteorological covariates.
+
 ## Important Limitations
 
 - Synthetic demo metrics are correctness checks, not evidence of operational
@@ -127,6 +140,8 @@ NOAA_OFFLINE=1 python -m scripts.evaluate_noaa_public
   not noisy sensor observations.
 - The live NOAA report uses short public API windows and no meteorological
   forcing, so it cannot validate storm-surge forecasting.
+- If no `reports/noaa_live_metrics.*` artifact is present, the live NOAA claim
+  remains open; mock reports are never a substitute.
 - Conformal intervals are split-conformal intervals; empirical coverage is
   reported because tidal time series are not guaranteed exchangeable.
 - Report thresholds are fit on train/reference windows, not the full displayed

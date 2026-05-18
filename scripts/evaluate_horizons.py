@@ -46,11 +46,11 @@ from sklearn.preprocessing import StandardScaler
 
 from src.data.loader import load_demo_data
 from src.features.engineering import (
-    NON_FEATURE_COLS,
     add_lag_features,
     add_rolling_features,
     add_temporal_covariates,
     add_tidal_harmonics,
+    feature_columns,
 )
 from src.models.metrics import compute_metrics, save_metrics
 
@@ -102,8 +102,7 @@ def build_horizon_features(
     # training-period rows into the test set.
     df = df.dropna()
 
-    exclude = set(NON_FEATURE_COLS) | {target_col, "_target_h"}
-    feature_cols = [c for c in df.columns if c not in exclude]
+    feature_cols = feature_columns(df, target_col=target_col)
 
     return df[feature_cols], df["_target_h"]
 

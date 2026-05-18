@@ -66,7 +66,7 @@ WAVE_MODELS: List[ModelBrand] = [
         display_name="ʻAle Piʻi (Rising Wave)",
         category="prototype",
         role="Surge/high-water residual model",
-        description="Dual-head tide + surge estimator.",
+        description="Residual high-water heuristic; not meteorological surge modeling.",
         order=4,
     ),
     ModelBrand(
