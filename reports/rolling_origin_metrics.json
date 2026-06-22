@@ -22,27 +22,27 @@
           "rmse": 0.029435318842682346,
           "r2": 0.9872638018256258,
           "nse": 0.9872638018256258,
-          "corr": 0.9936329851337456,
+          "corr": 0.9936329851337454,
           "mae_skill_vs_rolling_persistence": 0.0,
           "rmse_skill_vs_rolling_persistence": 0.0
         },
         "harmonic_ridge": {
-          "mae": 0.016519682056749765,
-          "rmse": 0.020890241145675375,
-          "r2": 0.9936596169872891,
-          "nse": 0.9936596169872891,
-          "corr": 0.996840093715636,
-          "mae_skill_vs_rolling_persistence": 0.29800705645914916,
-          "rmse_skill_vs_rolling_persistence": 0.29123399633038016
+          "mae": 0.016519682056749998,
+          "rmse": 0.02089024114567527,
+          "r2": 0.9936596169872892,
+          "nse": 0.9936596169872892,
+          "corr": 0.9968400937156364,
+          "mae_skill_vs_rolling_persistence": 0.2980070564591393,
+          "rmse_skill_vs_rolling_persistence": 0.2912339963303836
         },
         "grad_boost": {
-          "mae": 0.01852327765565045,
-          "rmse": 0.02348276623771917,
-          "r2": 0.9919882553881344,
-          "nse": 0.9919882553881344,
-          "corr": 0.9960356686286024,
-          "mae_skill_vs_rolling_persistence": 0.21286558900801877,
-          "rmse_skill_vs_rolling_persistence": 0.20327456895529283
+          "mae": 0.018682709376818513,
+          "rmse": 0.02364541494847801,
+          "r2": 0.9918768875237107,
+          "nse": 0.9918768875237107,
+          "corr": 0.9959849665302034,
+          "mae_skill_vs_rolling_persistence": 0.20609064365180196,
+          "rmse_skill_vs_rolling_persistence": 0.19775620868732502
         }
       },
       {
@@ -58,27 +58,27 @@
           "rmse": 0.02949604924894682,
           "r2": 0.9878250806640779,
           "nse": 0.9878250806640779,
-          "corr": 0.993913920228004,
+          "corr": 0.9939139202280044,
           "mae_skill_vs_rolling_persistence": 0.0,
           "rmse_skill_vs_rolling_persistence": 0.0
         },
         "harmonic_ridge": {
-          "mae": 0.016745052600899386,
-          "rmse": 0.020998752430353568,
-          "r2": 0.9939109847696854,
-          "nse": 0.9939109847696854,
+          "mae": 0.016745052600900152,
+          "rmse": 0.020998752430354446,
+          "r2": 0.9939109847696849,
+          "nse": 0.9939109847696849,
           "corr": 0.9969525477141222,
-          "mae_skill_vs_rolling_persistence": 0.28595686086413086,
-          "rmse_skill_vs_rolling_persistence": 0.29056801400087673
+          "mae_skill_vs_rolling_persistence": 0.2859568608640981,
+          "rmse_skill_vs_rolling_persistence": 0.290568014000847
         },
         "grad_boost": {
-          "mae": 0.018440414126968806,
-          "rmse": 0.023304965599099472,
-          "r2": 0.9925000735220075,
-          "nse": 0.9925000735220075,
-          "corr": 0.996258622319892,
-          "mae_skill_vs_rolling_persistence": 0.21366319330170314,
-          "rmse_skill_vs_rolling_persistence": 0.2126537953411165
+          "mae": 0.018515020893528078,
+          "rmse": 0.023458553534602068,
+          "r2": 0.9924008934629885,
+          "nse": 0.9924008934629885,
+          "corr": 0.9962063161927169,
+          "mae_skill_vs_rolling_persistence": 0.21048180886150736,
+          "rmse_skill_vs_rolling_persistence": 0.2074649064073335
         }
       },
       {
@@ -94,27 +94,27 @@
           "rmse": 0.029212428623979745,
           "r2": 0.9784515243556924,
           "nse": 0.9784515243556924,
-          "corr": 0.9892296778300225,
+          "corr": 0.9892296778300229,
           "mae_skill_vs_rolling_persistence": 0.0,
           "rmse_skill_vs_rolling_persistence": 0.0
         },
         "harmonic_ridge": {
-          "mae": 0.0175703225994696,
-          "rmse": 0.022212728058502836,
-          "r2": 0.9873602100795192,
-          "nse": 0.9873602100795192,
-          "corr": 0.9936874860963224,
-          "mae_skill_vs_rolling_persistence": 0.24091915415170262,
-          "rmse_skill_vs_rolling_persistence": 0.23730147840754257
+          "mae": 0.017570322599471198,
+          "rmse": 0.022212728058506236,
+          "r2": 0.9873602100795154,
+          "nse": 0.9873602100795154,
+          "corr": 0.9936874860963203,
+          "mae_skill_vs_rolling_persistence": 0.24091915415163356,
+          "rmse_skill_vs_rolling_persistence": 0.23730147840742577
         },
         "grad_boost": {
-          "mae": 0.019056946798957,
-          "rmse": 0.023844433411009936,
-          "r2": 0.9854350140243648,
-          "nse": 0.9854350140243648,
-          "corr": 0.9927006362260866,
-          "mae_skill_vs_rolling_persistence": 0.17669335815866216,
-          "rmse_skill_vs_rolling_persistence": 0.18127507513307928
+          "mae": 0.018982307290942444,
+          "rmse": 0.023769430654068724,
+          "r2": 0.9855264983542965,
+          "nse": 0.9855264983542965,
+          "corr": 0.9927499199268982,
+          "mae_skill_vs_rolling_persistence": 0.1799179671865635,
+          "rmse_skill_vs_rolling_persistence": 0.18385037753104494
         }
       }
     ]
@@ -136,27 +136,27 @@
           "rmse": 0.035211005421285226,
           "r2": 0.9953706932555882,
           "nse": 0.9953706932555882,
-          "corr": 0.9976842499681156,
+          "corr": 0.9976842499681158,
           "mae_skill_vs_rolling_persistence": 0.0,
           "rmse_skill_vs_rolling_persistence": 0.0
         },
         "harmonic_ridge": {
-          "mae": 0.016704220473306684,
-          "rmse": 0.02088217319972624,
+          "mae": 0.016704220473306282,
+          "rmse": 0.020882173199726236,
           "r2": 0.9983687648294565,
           "nse": 0.9983687648294565,
-          "corr": 0.9991861168575064,
-          "mae_skill_vs_rolling_persistence": 0.40928801187313724,
-          "rmse_skill_vs_rolling_persistence": 0.4084104261467062
+          "corr": 0.9991861168575061,
+          "mae_skill_vs_rolling_persistence": 0.40928801187315156,
+          "rmse_skill_vs_rolling_persistence": 0.4084104261467063
         },
         "grad_boost": {
-          "mae": 0.0205657941730911,
-          "rmse": 0.025607566801905225,
-          "r2": 0.9975469758823606,
-          "nse": 0.9975469758823606,
-          "corr": 0.9987749758835233,
-          "mae_skill_vs_rolling_persistence": 0.2727310332854076,
-          "rmse_skill_vs_rolling_persistence": 0.27454056688134987
+          "mae": 0.02047720847972825,
+          "rmse": 0.02556375594058007,
+          "r2": 0.9975553622447351,
+          "nse": 0.9975553622447351,
+          "corr": 0.9987780962045574,
+          "mae_skill_vs_rolling_persistence": 0.275863692551345,
+          "rmse_skill_vs_rolling_persistence": 0.27578172356239083
         }
       },
       {
@@ -177,22 +177,22 @@
           "rmse_skill_vs_rolling_persistence": 0.0
         },
         "harmonic_ridge": {
-          "mae": 0.016942673500001178,
-          "rmse": 0.021434088272769,
-          "r2": 0.9986497549945672,
-          "nse": 0.9986497549945672,
-          "corr": 0.9993252149687784,
-          "mae_skill_vs_rolling_persistence": 0.4507333631017991,
-          "rmse_skill_vs_rolling_persistence": 0.43940834180208976
+          "mae": 0.01694267349999958,
+          "rmse": 0.021434088272767073,
+          "r2": 0.9986497549945674,
+          "nse": 0.9986497549945674,
+          "corr": 0.9993252149687787,
+          "mae_skill_vs_rolling_persistence": 0.45073336310185097,
+          "rmse_skill_vs_rolling_persistence": 0.43940834180214006
         },
         "grad_boost": {
-          "mae": 0.02125067191193007,
-          "rmse": 0.026673458388734632,
-          "r2": 0.9979089654604006,
-          "nse": 0.9979089654604006,
-          "corr": 0.998955165237921,
-          "mae_skill_vs_rolling_persistence": 0.31107182742487016,
-          "rmse_skill_vs_rolling_persistence": 0.30237675250172935
+          "mae": 0.021360720760474544,
+          "rmse": 0.02679248197235367,
+          "r2": 0.997890262395483,
+          "nse": 0.997890262395483,
+          "corr": 0.9989464276036538,
+          "mae_skill_vs_rolling_persistence": 0.30750414013310123,
+          "rmse_skill_vs_rolling_persistence": 0.29926378463220615
         }
       },
       {
@@ -213,22 +213,22 @@
           "rmse_skill_vs_rolling_persistence": 0.0
         },
         "harmonic_ridge": {
-          "mae": 0.017413250759146643,
-          "rmse": 0.022109519207491463,
-          "r2": 0.9980808926075668,
-          "nse": 0.9980808926075668,
-          "corr": 0.9990415203691868,
-          "mae_skill_vs_rolling_persistence": 0.3961417089201065,
-          "rmse_skill_vs_rolling_persistence": 0.3857634548748148
+          "mae": 0.017413250759147136,
+          "rmse": 0.022109519207492614,
+          "r2": 0.9980808926075667,
+          "nse": 0.9980808926075667,
+          "corr": 0.9990415203691864,
+          "mae_skill_vs_rolling_persistence": 0.3961417089200894,
+          "rmse_skill_vs_rolling_persistence": 0.3857634548747828
         },
         "grad_boost": {
-          "mae": 0.020466934500239245,
-          "rmse": 0.025772537306743372,
-          "r2": 0.9973923155623466,
-          "nse": 0.9973923155623466,
-          "corr": 0.9986997192986994,
-          "mae_skill_vs_rolling_persistence": 0.2902457868490341,
-          "rmse_skill_vs_rolling_persistence": 0.2839991622685263
+          "mae": 0.02044750455682338,
+          "rmse": 0.025778094613883324,
+          "r2": 0.9973911908561846,
+          "nse": 0.9973911908561846,
+          "corr": 0.9986999972087072,
+          "mae_skill_vs_rolling_persistence": 0.29091958019119457,
+          "rmse_skill_vs_rolling_persistence": 0.2838447717046335
         }
       }
     ]

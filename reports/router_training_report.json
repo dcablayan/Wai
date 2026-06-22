@@ -1,0 +1,55 @@
+{
+  "audit": {
+    "feature_columns_checked": [
+      "context__hohonu_freshness_seconds",
+      "context__hohonu_qc_status",
+      "context__horizon_minutes",
+      "context__noaa_freshness_seconds",
+      "context__noaa_qc_status",
+      "context__noaa_residual_trend_m_per_hour",
+      "context__recent_hohonu_trend_m_per_hour",
+      "context__recent_noaa_residual_m",
+      "context__tide_phase",
+      "missing__hohonu_qc_ok",
+      "missing__missing_latest_hohonu",
+      "missing__missing_latest_noaa",
+      "missing__missing_tide_prediction",
+      "missing__noaa_qc_ok"
+    ],
+    "n_rows": 21,
+    "n_violations": 0,
+    "required_columns_present": true,
+    "violations": []
+  },
+  "feature_columns": [
+    "context__hohonu_freshness_seconds",
+    "context__horizon_minutes",
+    "context__noaa_freshness_seconds",
+    "context__noaa_residual_trend_m_per_hour",
+    "context__recent_hohonu_trend_m_per_hour",
+    "context__recent_noaa_residual_m",
+    "missing__hohonu_qc_ok",
+    "missing__missing_latest_hohonu",
+    "missing__missing_latest_noaa",
+    "missing__missing_tide_prediction",
+    "missing__noaa_qc_ok",
+    "context__hohonu_qc_status_pass",
+    "context__hohonu_qc_status_nan",
+    "context__noaa_qc_status_verified",
+    "context__noaa_qc_status_nan",
+    "context__tide_phase_falling",
+    "context__tide_phase_rising",
+    "context__tide_phase_nan"
+  ],
+  "label_counts": {
+    "local_tide": 11,
+    "noaa_residual": 9,
+    "regional_to_local_residual": 1
+  },
+  "model_path": "reports/router_model.pkl",
+  "n_rows": 21,
+  "n_test": 6,
+  "n_train": 15,
+  "test_accuracy": 0.16666666666666666,
+  "train_accuracy": 0.8666666666666667
+}

@@ -19,7 +19,7 @@
       "n_test_window": 5400
     },
     "threshold_source": "train_fit_plus_cal_mean_plus_2std",
-    "event_threshold_m": 0.49304817946495827,
+    "event_threshold_m": 0.49304817946496066,
     "models": {
       "harmonic_ridge": {
         "model": "harmonic_ridge",
@@ -27,27 +27,27 @@
         "empirical_coverage": 0.8753731343283582,
         "event_coverage": 0.6515151515151515,
         "non_event_coverage": 0.8781639591990933,
-        "qhat": 0.03397114272004176,
+        "qhat": 0.03397114272006868,
         "n_cal": 2390,
-        "mean_interval_width": 0.06794228544008352,
+        "mean_interval_width": 0.06794228544013736,
         "n_test": 5360,
         "n_event_samples": 66,
         "n_non_event_samples": 5294,
-        "event_threshold_m": 0.49304817946495827
+        "event_threshold_m": 0.49304817946496066
       },
       "grad_boost": {
         "model": "grad_boost",
         "nominal_coverage": 0.9,
-        "empirical_coverage": 0.8774253731343283,
-        "event_coverage": 0.015151515151515152,
-        "non_event_coverage": 0.8881752927842841,
-        "qhat": 0.038596527937223526,
+        "empirical_coverage": 0.8822761194029851,
+        "event_coverage": 0.045454545454545456,
+        "non_event_coverage": 0.8927087268605969,
+        "qhat": 0.03915251030647218,
         "n_cal": 2390,
-        "mean_interval_width": 0.07719305587444705,
+        "mean_interval_width": 0.07830502061294436,
         "n_test": 5360,
         "n_event_samples": 66,
         "n_non_event_samples": 5294,
-        "event_threshold_m": 0.49304817946495827
+        "event_threshold_m": 0.49304817946496066
       }
     }
   },
@@ -65,7 +65,7 @@
       "n_test_window": 5400
     },
     "threshold_source": "train_fit_plus_cal_mean_plus_2std",
-    "event_threshold_m": 1.0317303688783073,
+    "event_threshold_m": 1.0317303688783086,
     "models": {
       "harmonic_ridge": {
         "model": "harmonic_ridge",
@@ -73,27 +73,27 @@
         "empirical_coverage": 0.8904850746268657,
         "event_coverage": 0.7630662020905923,
         "non_event_coverage": 0.8976936723832052,
-        "qhat": 0.035610386097120195,
+        "qhat": 0.0356103860971434,
         "n_cal": 2390,
-        "mean_interval_width": 0.07122077219424039,
+        "mean_interval_width": 0.0712207721942868,
         "n_test": 5360,
         "n_event_samples": 287,
         "n_non_event_samples": 5073,
-        "event_threshold_m": 1.0317303688783073
+        "event_threshold_m": 1.0317303688783086
       },
       "grad_boost": {
         "model": "grad_boost",
         "nominal_coverage": 0.9,
-        "empirical_coverage": 0.8944029850746269,
+        "empirical_coverage": 0.8972014925373134,
         "event_coverage": 0.8083623693379791,
-        "non_event_coverage": 0.899270648531441,
-        "qhat": 0.04343646487948183,
+        "non_event_coverage": 0.902227478809383,
+        "qhat": 0.043712700557971995,
         "n_cal": 2390,
-        "mean_interval_width": 0.08687292975896366,
+        "mean_interval_width": 0.08742540111594399,
         "n_test": 5360,
         "n_event_samples": 287,
         "n_non_event_samples": 5073,
-        "event_threshold_m": 1.0317303688783073
+        "event_threshold_m": 1.0317303688783086
       }
     }
   }

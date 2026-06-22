@@ -1,4 +1,4 @@
-.PHONY: setup demo-data train benchmark report horizons events rolling-origin conformal noaa-eval noaa-eval-offline dashboard test coverage summary visuals scientific-audit demo
+.PHONY: setup demo-data train benchmark report horizons events rolling-origin conformal noaa-eval noaa-eval-offline dashboard test coverage summary visuals scientific-audit forecast replay train-router demo
 
 setup:
 	pip install -r requirements.txt
@@ -44,6 +44,15 @@ scientific-audit:
 
 dashboard:
 	python -m scripts.run_dashboard
+
+forecast:
+	python -m scripts.run_orchestrated_forecast
+
+replay:
+	python -m scripts.run_historical_replay
+
+train-router:
+	python -m scripts.train_router
 
 test:
 	pytest tests/ -v
