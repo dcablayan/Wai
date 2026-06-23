@@ -18,10 +18,24 @@ class ForecastWorkerAdapter:
     def expert_id(self) -> str:
         return self.expert.model_name
 
-    def run(self, context: Any, visible_messages: list[Any] | None = None) -> dict[str, Any]:
+    def run(self, role_input: Any, visible_messages: list[Any] | None = None) -> dict[str, Any]:
+        context = getattr(role_input, "context", role_input)
+        if self.expert_id in set(getattr(context, "forced_worker_exceptions", set())):
+            raise RuntimeError(f"{self.expert_id} forced exception for randomized episode")
+        if self.expert_id in set(getattr(context, "forced_worker_timeouts", set())):
+            return {
+                "forecast": None,
+                "worker_status": "timeout",
+                "message": f"{self.expert_id} forced timeout for randomized episode",
+                "assumptions": _assumptions_for(self.expert_id),
+            }
         forecast = self.expert.forecast(context)
+        serialized = forecast_to_payload(forecast) if forecast.ok else None
+        if serialized is not None and self.expert_id in set(getattr(context, "forced_invalid_intervals", set())):
+            serialized["upper_m"] = float(serialized["lower_m"] - 0.05)
+            serialized.setdefault("diagnostics", {})["forced_invalid_interval"] = True
         payload = {
-            "forecast": forecast_to_payload(forecast) if forecast.ok else None,
+            "forecast": serialized,
             "worker_status": forecast.status,
             "message": forecast.message,
             "assumptions": _assumptions_for(forecast.model_name),
@@ -40,6 +54,8 @@ def forecast_to_payload(forecast: ExpertForecast) -> dict[str, Any]:
         "upper_m": float(forecast.upper_m),
         "confidence": float(forecast.confidence),
         "experts_used": [forecast.model_name],
+        "leaf_experts": [forecast.model_name],
+        "input_turn_ids": [],
         "method": forecast.model_name,
         "diagnostics": dict(forecast.diagnostics),
     }

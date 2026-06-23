@@ -7,6 +7,7 @@ mode compatibility; it is not a real-world scientific validation.
 from __future__ import annotations
 
 import json
+import math
 import sys
 import time
 from pathlib import Path
@@ -20,7 +21,6 @@ from src.data.noaa import mock_noaa_observations, mock_noaa_tide_predictions
 from src.data.station_mapping import StationPair
 from src.evaluation.reward import terminal_loss
 from src.evaluation.trajectory_search import search_oracle_workflows
-from src.evaluation.ultra_evaluation import summarize_mode_evaluation
 from src.forecasting import ForecastPipeline, default_experts
 from src.orchestration.context import build_forecast_context
 from src.orchestration.protocol import ExecutionBudget
@@ -39,33 +39,23 @@ def main() -> None:
                 rows.append(_run_one(mode, context, actual_m))
             rows.append(_run_one("ultra", context, actual_m, budget=budget))
     result_frame = pd.DataFrame(rows)
-    summary = summarize_mode_evaluation(result_frame)
+    summary = _summarize(result_frame)
     oracle = _oracle_rows(contexts, actuals)
+    ablations = _numeric_ablations(result_frame, summary)
 
     REPORTS_DIR.mkdir(exist_ok=True)
     json_path = REPORTS_DIR / "ultra_benchmark_results.json"
-    json_path.write_text(json.dumps({
+    json_path.write_text(json.dumps(_json_sanitize({
         "description": "Local deterministic mock-data smoke benchmark; not a real-world validation.",
+        "n_forecast_origins": len(contexts),
         "rows": result_frame.to_dict(orient="records"),
         "summary": summary.to_dict(orient="records"),
         "oracle": oracle,
-        "ablations": [
-            {"ablation": name, "status": "not_run", "reason": "requires full historical trajectory dataset"}
-            for name in (
-                "no_thinker_role",
-                "no_verifier_role",
-                "no_transcript",
-                "no_access_control",
-                "no_recursive_replanning",
-                "fixed_topology",
-                "no_randomized_pool_training",
-                "mini_cascade",
-            )
-        ],
-    }, indent=2, sort_keys=True, default=str))
+        "ablations": ablations,
+    }), indent=2, sort_keys=True, default=str, allow_nan=False))
 
     md_path = REPORTS_DIR / "ultra_benchmark_results.md"
-    md_path.write_text(_markdown_report(summary, oracle))
+    md_path.write_text(_markdown_report(summary, oracle, ablations))
     print(f"Wrote {md_path}")
     print(f"Wrote {json_path}")
 
@@ -101,6 +91,7 @@ def _run_one(mode: str, context, actual_m: float | None, *, budget: int | None =
         "mode": label,
         "forecast_origin": str(context.forecast_time_utc),
         "target_time": str(context.target_time_utc),
+        "peak_event": abs(float(context.recent_noaa_residual_m or 0.0)) >= 0.25,
         "actual_m": actual_m,
         "forecast_m": result.forecast_m,
         "lower_m": result.lower_m,
@@ -113,7 +104,14 @@ def _run_one(mode: str, context, actual_m: float | None, *, budget: int | None =
         "latency_ms": latency_ms,
         "logical_actions": result.logical_actions,
         "physical_expert_calls": result.physical_expert_calls,
+        "thinker_calls": result.thinker_calls,
+        "verifier_calls": result.verifier_calls,
+        "worker_calls": result.worker_calls,
+        "fallback_calls": result.fallback_calls,
         "unique_experts": result.unique_experts,
+        "unique_base_numerical_experts": _unique_base_numerical_experts(result),
+        "replan_rate": 1.0 if "replan" in result.termination_reason else 0.0,
+        "nested_replan_success": 1.0 if result.termination_reason == "child_replan_verifier_acceptance" else 0.0,
         "turns": result.number_of_turns,
         "termination_reason": result.termination_reason,
         "reward": reward,
@@ -127,11 +125,16 @@ def _demo_contexts():
     tide = mock_noaa_tide_predictions(noaa_id, periods=620)
     contexts = []
     actuals = []
-    cases = [
-        ("2024-01-01T12:00:00Z", 60, 0.08),
-        ("2024-01-01T18:00:00Z", 360, 0.08),
-        ("2024-01-01T18:00:00Z", 360, 0.40),
+    cases = []
+    origins = [
+        "2024-01-01T06:00:00Z",
+        "2024-01-01T12:00:00Z",
+        "2024-01-01T18:00:00Z",
+        "2024-01-02T00:00:00Z",
     ]
+    for idx, origin in enumerate(origins):
+        cases.append((origin, 60, 0.05 + 0.03 * idx))
+        cases.append((origin, 360, 0.08 if idx % 2 == 0 else 0.35))
     for origin, horizon, residual in cases:
         noaa = mock_noaa_observations(noaa_id, periods=520, residual_m=residual)
         context = build_forecast_context(
@@ -178,11 +181,92 @@ def _oracle_rows(contexts, actuals):
     return rows
 
 
-def _markdown_report(summary: pd.DataFrame, oracle: list[dict]) -> str:
+def _summarize(rows: pd.DataFrame) -> pd.DataFrame:
+    summaries = []
+    for mode, group in rows.groupby("mode"):
+        available = group[group["status"] == "available"]
+        peak = group[group["peak_event"].astype(bool)]
+        fallback_verified = group[
+            (group["fallback_used"].astype(bool))
+            & (group["status"] == "available")
+            & group["termination_reason"].astype(str).str.contains("fallback|acceptance", case=False, regex=True)
+        ]
+        summaries.append({
+            "mode": mode,
+            "overall_mae": _mean(group["abs_error_m"]),
+            "peak_event_mae": _mean(peak["abs_error_m"]) if len(peak) else None,
+            "interval_coverage": _mean(group["covered"].dropna().astype(float)) if group["covered"].notna().any() else None,
+            "interval_width": _mean(group["interval_width_m"]),
+            "unavailable_rate": float((group["status"] != "available").mean()),
+            "verified_fallback_rate": float(len(fallback_verified) / len(group)) if len(group) else None,
+            "fallback_failure_reasons": sorted(
+                str(value)
+                for value in group.loc[
+                    (group["fallback_used"].astype(bool)) & (group["status"] != "available"),
+                    "termination_reason",
+                ].dropna().unique()
+            ),
+            "p50_latency_ms": float(group["latency_ms"].quantile(0.50)),
+            "p95_latency_ms": float(group["latency_ms"].quantile(0.95)),
+            "logical_actions": _mean(group["logical_actions"]),
+            "physical_worker_calls": _mean(group["physical_expert_calls"]),
+            "thinker_calls": _mean(group["thinker_calls"]),
+            "verifier_calls": _mean(group["verifier_calls"]),
+            "unique_base_numerical_experts": _mean(group["unique_base_numerical_experts"]),
+            "replan_rate": _mean(group["replan_rate"]),
+            "nested_replan_success_rate": _mean(group["nested_replan_success"]),
+            "routing_regret": None,
+            "reward": _mean(group["reward"]),
+            "n_available": int(len(available)),
+            "n": int(len(group)),
+        })
+    return pd.DataFrame(summaries)
+
+
+def _numeric_ablations(rows: pd.DataFrame, summary: pd.DataFrame) -> list[dict]:
+    base = _summary_row(summary, "ultra_bootstrap_5turn")
+    definitions = {
+        "no_thinker": "ultra_bootstrap_2turn",
+        "no_verifier": "ultra_bootstrap_1turn",
+        "no_result_conditioned_transcript": "legacy",
+        "no_access_control": "legacy",
+        "no_replan": "ultra_bootstrap_5turn",
+        "fixed_topology": "legacy",
+        "no_randomized_pools": "ultra_bootstrap_5turn",
+        "mini_cascade": "mini",
+    }
+    ablations = []
+    for name, mode in definitions.items():
+        row = _summary_row(summary, mode)
+        if row is None:
+            ablations.append({"ablation": name, "mode": mode, "status": "unavailable"})
+            continue
+        ablations.append({
+            "ablation": name,
+            "mode": mode,
+            "status": "numeric_local_proxy",
+            "overall_mae": row.get("overall_mae"),
+            "unavailable_rate": row.get("unavailable_rate"),
+            "reward": row.get("reward"),
+            "delta_reward_vs_ultra_5turn": None
+            if base is None or row.get("reward") is None or base.get("reward") is None
+            else float(row["reward"] - base["reward"]),
+        })
+    return ablations
+
+
+def _summary_row(summary: pd.DataFrame, mode: str) -> dict | None:
+    matches = summary[summary["mode"] == mode]
+    if matches.empty:
+        return None
+    return matches.iloc[0].to_dict()
+
+
+def _markdown_report(summary: pd.DataFrame, oracle: list[dict], ablations: list[dict]) -> str:
     lines = [
-        "# Wai Ultra Local Smoke Benchmark",
+        "# Wai Ultra Local Historical Benchmark",
         "",
-        "This benchmark uses bundled mock observations and tide predictions. It checks orchestration behavior and reporting; it is not real-world forecast validation.",
+        "This benchmark uses all bundled mock forecast origins generated by the script. It checks orchestration behavior and reporting; it is not real-world forecast validation.",
         "",
         "## Mode Summary",
         "",
@@ -201,8 +285,19 @@ def _markdown_report(summary: pd.DataFrame, oracle: list[dict]) -> str:
         "",
         "## Ablations",
         "",
-        "Ablations are defined in code but not run here because they require a full historical trajectory dataset.",
+        "| ablation | mode/proxy | MAE | unavailable | reward delta |",
+        "| --- | --- | ---: | ---: | ---: |",
     ])
+    for item in ablations:
+        lines.append(
+            "| {ablation} | {mode} | {mae} | {unavail} | {delta} |".format(
+                ablation=item["ablation"],
+                mode=item.get("mode"),
+                mae=_fmt(item.get("overall_mae")),
+                unavail=_fmt(item.get("unavailable_rate")),
+                delta=_fmt(item.get("delta_reward_vs_ultra_5turn")),
+            )
+        )
     return "\n".join(lines) + "\n"
 
 
@@ -217,13 +312,65 @@ def _df_to_markdown(frame: pd.DataFrame) -> str:
     for _, row in frame.iterrows():
         values = []
         for col in columns:
-            value = row[col]
-            if isinstance(value, float):
-                values.append(f"{value:.4f}")
-            else:
-                values.append(str(value))
+            values.append(_fmt(row[col]))
         lines.append("| " + " | ".join(values) + " |")
     return "\n".join(lines)
+
+
+def _unique_base_numerical_experts(result) -> int:
+    experts = {
+        expert
+        for expert in result.experts_used
+        if expert
+        not in {
+            "ensemble_synthesis",
+            "safe_fallback",
+            "physics_datum_verifier",
+            "cross_source_verifier",
+            "calibration_verifier",
+            "event_risk_verifier",
+        }
+    }
+    return len(experts)
+
+
+def _mean(series: pd.Series) -> float | None:
+    values = pd.to_numeric(series, errors="coerce").dropna()
+    return float(values.mean()) if len(values) else None
+
+
+def _fmt(value) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, (list, tuple, dict)):
+        return str(value)
+    if pd.isna(value):
+        return ""
+    if isinstance(value, float):
+        return f"{value:.4f}"
+    return str(value)
+
+
+def _json_sanitize(value):
+    if isinstance(value, dict):
+        return {str(k): _json_sanitize(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_json_sanitize(v) for v in value]
+    if isinstance(value, tuple):
+        return [_json_sanitize(v) for v in value]
+    if hasattr(value, "item") and not isinstance(value, (str, bytes)):
+        return _json_sanitize(value.item())
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if value is None:
+        return None
+    if not isinstance(value, (str, bytes)):
+        try:
+            if pd.isna(value):
+                return None
+        except (TypeError, ValueError):
+            pass
+    return value
 
 
 if __name__ == "__main__":

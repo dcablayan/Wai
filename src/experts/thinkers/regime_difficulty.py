@@ -15,7 +15,8 @@ class RegimeAndDifficultyThinker:
 
     expert_id: str = "regime_difficulty_thinker"
 
-    def analyze(self, context: Any, visible_messages: list[Any] | None = None) -> dict[str, Any]:
+    def analyze(self, role_input: Any, visible_messages: list[Any] | None = None) -> dict[str, Any]:
+        context = getattr(role_input, "context", role_input)
         horizon_hours = max(0.0, float(context.horizon_minutes) / 60.0)
         residual = abs(float(context.recent_noaa_residual_m or 0.0))
         residual_trend = abs(float(context.noaa_residual_trend_m_per_hour or 0.0))

@@ -18,21 +18,38 @@ class EnsembleSynthesisWorker:
     expert_id: str = "ensemble_synthesis"
     method: str = "weighted_median"
 
-    def run(self, context: Any, visible_messages: list[Any]) -> dict[str, Any]:
+    allow_safe_fallback: bool = False
+
+    def run(self, role_input: Any) -> dict[str, Any]:
+        context = role_input.context
+        visible_messages = role_input.visible_messages
         forecasts = []
         used_turns = []
+        leaf_experts: list[str] = []
+        reused_any = False
         for message in visible_messages:
+            if message.expert_id == self.expert_id:
+                continue
             forecast_payload = message.structured_result.get("forecast")
             if not forecast_payload:
                 continue
+            leaves = list(forecast_payload.get("leaf_experts", forecast_payload.get("experts_used", [message.expert_id])))
+            if not self.allow_safe_fallback and "safe_fallback" in leaves:
+                continue
+            if any(leaf in leaf_experts for leaf in leaves):
+                continue
             forecasts.append(_forecast_from_payload(context, forecast_payload, message.expert_id))
             used_turns.append(message.turn_id)
-        if not forecasts:
+            leaf_experts.extend(leaves)
+            reused_any = reused_any or bool(message.structured_result.get("reused", False))
+        unique_leaf_experts = sorted(set(leaf_experts))
+        if len(unique_leaf_experts) < 2:
             return {
                 "forecast": None,
                 "worker_status": "unavailable",
-                "message": "synthesis received no successful allowed worker outputs",
+                "message": "synthesis requires at least two distinct successful base numerical experts",
                 "allowed_input_turns": [message.turn_id for message in visible_messages],
+                "leaf_experts": unique_leaf_experts,
             }
 
         combined = ForecastCombiner().combine(forecasts, method=self.method)
@@ -53,11 +70,15 @@ class EnsembleSynthesisWorker:
             "upper_m": upper,
             "confidence": confidence,
             "experts_used": list(combined.experts_used),
+            "leaf_experts": unique_leaf_experts,
+            "input_turn_ids": used_turns,
             "method": f"ensemble_{self.method}",
             "diagnostics": {
                 "contributing_expert_weights": combined.diagnostics.get("weights", {}),
                 "disagreement_m": disagreement,
                 "allowed_input_turns": used_turns,
+                "leaf_experts": unique_leaf_experts,
+                "any_contributor_reused": reused_any,
                 "assumptions": [
                     "only forecasts in the access list were visible to synthesis",
                     "interval is widened when allowed workers disagree",
@@ -70,6 +91,9 @@ class EnsembleSynthesisWorker:
             "message": "",
             "allowed_input_turns": used_turns,
             "contributing_expert_weights": combined.diagnostics.get("weights", {}),
+            "leaf_experts": unique_leaf_experts,
+            "input_turn_ids": used_turns,
+            "any_contributor_reused": reused_any,
             "disagreement_diagnostics": {
                 "disagreement_m": disagreement,
                 "n_allowed_forecasts": len(forecasts),

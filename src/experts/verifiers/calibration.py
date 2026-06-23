@@ -14,7 +14,9 @@ class CalibrationVerifier:
 
     expert_id: str = "calibration_verifier"
 
-    def verify(self, context: Any, visible_messages: list[Any]) -> VerifierResult:
+    def verify(self, role_input: Any) -> VerifierResult:
+        context = role_input.context
+        visible_messages = role_input.visible_messages
         candidate = _latest_candidate(visible_messages)
         if candidate is None:
             return VerifierResult(

@@ -17,7 +17,9 @@ class CrossSourceVerifier:
     expert_id: str = "cross_source_verifier"
     high_disagreement_m: float = 0.4
 
-    def verify(self, context: Any, visible_messages: list[Any]) -> VerifierResult:
+    def verify(self, role_input: Any) -> VerifierResult:
+        context = role_input.context
+        visible_messages = role_input.visible_messages
         candidate = _latest_candidate(visible_messages)
         if candidate is None:
             return VerifierResult(

@@ -40,7 +40,7 @@ class LearnedCoordinatorPolicy(CoordinatorPolicy):
     artifact: dict[str, Any]
     policy_source: str = "learned"
     artifact_version: str = "unvalidated"
-    min_validation_accuracy: float = 0.0
+    min_validation_accuracy: float = 0.01
 
     @classmethod
     def from_artifact(
@@ -49,21 +49,25 @@ class LearnedCoordinatorPolicy(CoordinatorPolicy):
         *,
         encoder: StateEncoder | None = None,
         expected_registry: ActionRegistry | None = None,
-        min_validation_accuracy: float = 0.0,
+        min_validation_accuracy: float = 0.01,
+        allow_shadow: bool = False,
     ) -> "LearnedCoordinatorPolicy":
         enc = encoder or StateEncoder()
         FeatureSchema().validate_artifact_schema(artifact["feature_schema"])
         head = CoordinationHead.from_artifact(artifact)
         if expected_registry is not None:
             expected_registry.validate(head.action_registry)
-        metrics = artifact.get("validation_metrics", {})
-        if metrics.get("imitation_accuracy", 0.0) < min_validation_accuracy:
-            raise ValueError("Coordinator artifact did not pass validation threshold")
         metadata = artifact.get("training_metadata", {})
+        policy_source = _validate_artifact_for_control(
+            artifact,
+            min_validation_accuracy=min_validation_accuracy,
+            allow_shadow=allow_shadow,
+        )
         return cls(
             head=head,
             encoder=enc,
             artifact=artifact,
+            policy_source=policy_source,
             artifact_version=str(metadata.get("artifact_version", "unversioned")),
             min_validation_accuracy=min_validation_accuracy,
         )
@@ -75,7 +79,8 @@ class LearnedCoordinatorPolicy(CoordinatorPolicy):
         *,
         encoder: StateEncoder | None = None,
         expected_registry: ActionRegistry | None = None,
-        min_validation_accuracy: float = 0.0,
+        min_validation_accuracy: float = 0.01,
+        allow_shadow: bool = False,
     ) -> "LearnedCoordinatorPolicy":
         import pickle
 
@@ -86,6 +91,7 @@ class LearnedCoordinatorPolicy(CoordinatorPolicy):
             encoder=encoder,
             expected_registry=expected_registry,
             min_validation_accuracy=min_validation_accuracy,
+            allow_shadow=allow_shadow,
         )
 
     def select_action(
@@ -133,3 +139,67 @@ def _key_for_action(action: CoordinationAction) -> str:
         action.subtask_kind.value,
         action.control_decision.value,
     )
+
+
+def _validate_artifact_for_control(
+    artifact: dict[str, Any],
+    *,
+    min_validation_accuracy: float,
+    allow_shadow: bool,
+) -> str:
+    metrics = artifact.get("validation_metrics", {})
+    metadata = artifact.get("training_metadata", {})
+    thresholds = {
+        "min_validation_accuracy": min_validation_accuracy,
+        "min_heldout_workflow_reward": -10.0,
+        "max_routing_regret": 10.0,
+        "max_mae": 10.0,
+        "max_peak_event_error": 10.0,
+        "min_interval_coverage": 0.0,
+        "max_unavailable_rate": 1.0,
+        "min_fallback_success_rate": 0.0,
+        "max_invalid_action_rate": 0.0,
+        "min_dropout_reward": -10.0,
+        **metadata.get("validation_thresholds", {}),
+    }
+    thresholds["min_validation_accuracy"] = max(
+        float(thresholds["min_validation_accuracy"]),
+        float(min_validation_accuracy),
+    )
+    required = [
+        "heldout_workflow_reward",
+        "routing_regret",
+        "mae",
+        "peak_event_error",
+        "interval_coverage",
+        "unavailable_rate",
+        "fallback_success_rate",
+        "invalid_action_rate",
+        "expert_dropout_reward",
+    ]
+    missing = [name for name in required if name not in metrics]
+    test_accuracy = metrics.get("test_accuracy")
+    failed = bool(missing)
+    if test_accuracy is not None and float(test_accuracy) < thresholds["min_validation_accuracy"]:
+        failed = True
+    comparisons = {
+        "heldout_workflow_reward": float(metrics.get("heldout_workflow_reward", -float("inf"))) >= thresholds["min_heldout_workflow_reward"],
+        "routing_regret": float(metrics.get("routing_regret", float("inf"))) <= thresholds["max_routing_regret"],
+        "mae": float(metrics.get("mae", float("inf"))) <= thresholds["max_mae"],
+        "peak_event_error": float(metrics.get("peak_event_error", float("inf"))) <= thresholds["max_peak_event_error"],
+        "interval_coverage": float(metrics.get("interval_coverage", -float("inf"))) >= thresholds["min_interval_coverage"],
+        "unavailable_rate": float(metrics.get("unavailable_rate", float("inf"))) <= thresholds["max_unavailable_rate"],
+        "fallback_success_rate": float(metrics.get("fallback_success_rate", -float("inf"))) >= thresholds["min_fallback_success_rate"],
+        "invalid_action_rate": float(metrics.get("invalid_action_rate", float("inf"))) <= thresholds["max_invalid_action_rate"],
+        "expert_dropout_reward": float(metrics.get("expert_dropout_reward", -float("inf"))) >= thresholds["min_dropout_reward"],
+    }
+    if not all(comparisons.values()):
+        failed = True
+    status = str(metadata.get("validation_status", "shadow"))
+    if status != "validated":
+        failed = True
+    if failed:
+        if allow_shadow:
+            return "learned_shadow"
+        raise ValueError("Coordinator artifact did not pass held-out validation thresholds")
+    return "learned"

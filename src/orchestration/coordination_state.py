@@ -48,9 +48,9 @@ class CoordinationState:
 
     def __post_init__(self) -> None:
         if self.remaining_turn_budget <= 0:
-            self.remaining_turn_budget = self.budget.max_turns
+            self.remaining_turn_budget = self.budget.coordination_turn_limit
         if self.remaining_call_budget <= 0:
-            self.remaining_call_budget = self.budget.max_turns
+            self.remaining_call_budget = self.budget.coordination_turn_limit
 
     @property
     def remaining_deadline_ms(self) -> float:
@@ -85,6 +85,28 @@ class CoordinationState:
             if message.role is Role.WORKER and message.expert_id not in excluded
         }
 
+    @property
+    def physical_worker_calls(self) -> int:
+        return sum(
+            1
+            for message in self.full_message_transcript
+            if message.role is Role.WORKER
+            and message.expert_id != "ensemble_synthesis"
+            and not message.structured_result.get("reused", False)
+        )
+
+    @property
+    def verifier_calls(self) -> int:
+        return sum(1 for message in self.full_message_transcript if message.role is Role.VERIFIER)
+
+    @property
+    def remaining_physical_worker_calls(self) -> int:
+        return max(0, self.budget.max_physical_worker_calls - self.physical_worker_calls)
+
+    @property
+    def remaining_verifier_calls(self) -> int:
+        return max(0, self.budget.max_verifier_calls - self.verifier_calls)
+
     def visible_messages(self, access_list: list[int]) -> list[CoordinationMessage]:
         by_turn = {message.turn_id: message for message in self.full_message_transcript}
         missing = [turn for turn in access_list if turn not in by_turn]
@@ -100,8 +122,8 @@ class CoordinationState:
         self.action_transcript.append(action)
         self.full_message_transcript.append(message)
         self.completed_workflow_graph.add_turn(action, message)
-        self.remaining_turn_budget = max(0, self.budget.max_turns - len(self.full_message_transcript))
-        self.remaining_call_budget = max(0, self.budget.max_turns - len(self.full_message_transcript))
+        self.remaining_turn_budget = max(0, self.budget.coordination_turn_limit - len(self.full_message_transcript))
+        self.remaining_call_budget = max(0, self.budget.coordination_turn_limit - len(self.full_message_transcript))
 
         if action.role is Role.THINKER and message.status in {MessageStatus.SUCCESS, MessageStatus.REUSED}:
             result = message.structured_result
@@ -123,6 +145,9 @@ class CoordinationState:
                 method=str(forecast.get("method", action.expert_id)),
                 source_turn_id=action.turn_id,
                 diagnostics=dict(forecast.get("diagnostics", {})),
+                leaf_experts=list(forecast.get("leaf_experts", forecast.get("experts_used", [action.expert_id]))),
+                input_turn_ids=list(forecast.get("input_turn_ids") or [action.turn_id]),
+                verifier_adjustments=dict(forecast.get("verifier_adjustments", {})),
             )
 
         verifier = message.structured_result.get("verifier")
@@ -139,13 +164,7 @@ class CoordinationState:
         return self.current_candidate_forecasts[latest_turn]
 
     def telemetry(self) -> CoordinationTelemetry:
-        physical = sum(
-            1
-            for message in self.full_message_transcript
-            if message.role is Role.WORKER
-            and message.expert_id not in {"ensemble_synthesis"}
-            and not message.structured_result.get("reused", False)
-        )
+        physical = self.physical_worker_calls
         reused = sum(1 for message in self.full_message_transcript if message.structured_result.get("reused", False))
         fallback = sum(1 for message in self.full_message_transcript if message.expert_id == "safe_fallback")
         return CoordinationTelemetry(

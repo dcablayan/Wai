@@ -21,6 +21,7 @@ from src.orchestration.protocol import (
     CoordinationMessage,
     MessageStatus,
     Role,
+    RoleInput,
 )
 
 
@@ -73,7 +74,7 @@ class UltraExecutor:
             max(1.0, state.remaining_deadline_ms),
         )
         result, status, warnings = self._run_with_timeout(
-            lambda: self._execute_unbounded(action, state.original_context, visible_messages),
+            lambda: self._execute_unbounded(action, self._role_input(action, state, visible_messages)),
             timeout_ms=remaining_timeout_ms,
         )
         latency_ms = (time.perf_counter() - started) * 1000.0
@@ -88,19 +89,39 @@ class UltraExecutor:
     def _execute_unbounded(
         self,
         action: CoordinationAction,
-        context: Any,
-        visible_messages: list[Any],
+        role_input: RoleInput,
     ) -> dict[str, Any]:
         if action.role is Role.THINKER:
             thinker = self.thinkers[action.expert_id]
-            return thinker.analyze(context, visible_messages)
+            return thinker.analyze(role_input)
         if action.role is Role.WORKER:
             worker = self.workers[action.expert_id]
-            return worker.run(context, visible_messages)
+            return worker.run(role_input)
         if action.role is Role.VERIFIER:
             verifier = self.verifiers[action.expert_id]
-            return {"verifier": verifier.verify(context, visible_messages).to_dict()}
+            return {"verifier": verifier.verify(role_input).to_dict()}
         raise ValueError(f"Unsupported role: {action.role}")
+
+    def _role_input(
+        self,
+        action: CoordinationAction,
+        state: CoordinationState,
+        visible_messages: list[CoordinationMessage],
+    ) -> RoleInput:
+        requested_evidence = []
+        if state.verifier_findings:
+            requested_evidence = list(state.verifier_findings[-1].get("requested_evidence", []))
+        return RoleInput(
+            context=state.original_context,
+            subtask_kind=action.subtask_kind,
+            subtask_parameters=dict(action.subtask_parameters),
+            visible_messages=visible_messages,
+            remaining_turn_budget=state.remaining_turn_budget,
+            remaining_physical_worker_calls=state.remaining_physical_worker_calls,
+            remaining_verifier_calls=state.remaining_verifier_calls,
+            remaining_deadline_ms=state.remaining_deadline_ms,
+            requested_evidence=requested_evidence,
+        )
 
     def _run_with_timeout(
         self,
@@ -150,6 +171,8 @@ class UltraExecutor:
 
 
 def _status_from_result(result: dict[str, Any]) -> MessageStatus:
+    if result.get("worker_status") == "timeout":
+        return MessageStatus.TIMEOUT
     if result.get("forecast") is None and result.get("worker_status") in {"unavailable", "failed"}:
         return MessageStatus.UNAVAILABLE
     if "error" in result:

@@ -38,6 +38,7 @@ class WorkflowGraph:
     dependency_edges: list[WorkflowEdge] = field(default_factory=list)
     access_edges: list[WorkflowEdge] = field(default_factory=list)
     parallel_groups: dict[str, list[int]] = field(default_factory=dict)
+    child_workflows: list[dict[str, Any]] = field(default_factory=list)
     final_accepted_node: int | None = None
 
     def add_turn(self, action: CoordinationAction, message: CoordinationMessage) -> None:
@@ -73,11 +74,25 @@ class WorkflowGraph:
     def mark_accepted(self, turn_id: int) -> None:
         self.final_accepted_node = int(turn_id)
 
+    def add_child_workflow(
+        self,
+        *,
+        parent_verifier_turn_id: int,
+        child_graph: dict[str, Any],
+        child_depth: int,
+    ) -> None:
+        self.child_workflows.append({
+            "parent_verifier_turn_id": int(parent_verifier_turn_id),
+            "child_depth": int(child_depth),
+            "graph": child_graph,
+        })
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "nodes": [asdict(node) for node in self.nodes],
             "dependency_edges": [asdict(edge) for edge in self.dependency_edges],
             "access_edges": [asdict(edge) for edge in self.access_edges],
             "parallel_groups": dict(self.parallel_groups),
+            "child_workflows": list(self.child_workflows),
             "final_accepted_node": self.final_accepted_node,
         }

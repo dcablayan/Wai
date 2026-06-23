@@ -16,7 +16,9 @@ class EventRiskVerifier:
     elevated_residual_m: float = 0.25
     rapid_change_m_per_hour: float = 0.12
 
-    def verify(self, context: Any, visible_messages: list[Any]) -> VerifierResult:
+    def verify(self, role_input: Any) -> VerifierResult:
+        context = role_input.context
+        visible_messages = role_input.visible_messages
         candidate = _latest_candidate(visible_messages)
         if candidate is None:
             return VerifierResult(

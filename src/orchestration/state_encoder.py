@@ -134,7 +134,10 @@ class StateEncoder:
             "station_pair_lag_hours": _scale(abs(float(context.station_pair.lag_minutes)) / 60.0, 6.0),
             "model_disagreement": _scale(abs(float(context.model_disagreement_m or 0.0)), 1.0),
             "recent_skill_mean": _recent_skill(context),
-            "remaining_turns_fraction": _safe_div(state.remaining_turn_budget, state.budget.max_turns),
+            "remaining_turns_fraction": _safe_div(
+                state.remaining_turn_budget,
+                state.budget.coordination_turn_limit,
+            ),
             "remaining_deadline_fraction": _safe_div(state.remaining_deadline_ms, state.budget.deadline_ms),
             "recursion_depth": _safe_div(state.recursion_depth, max(1, state.budget.max_recursion_depth)),
             "difficulty_estimate": state.current_difficulty_estimate,

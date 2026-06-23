@@ -194,6 +194,10 @@ def _is_feasible(
     action: CoordinationAction,
 ) -> tuple[bool, str]:
     context = state.original_context
+    if _only_fallback_resources_remain(state) and not _is_reserved_fallback_action(state, action):
+        return False, "only reserved fallback resources remain"
+    if action.expert_id in set(getattr(context, "disabled_experts", set())):
+        return False, f"{action.expert_id} disabled for this randomized episode"
     if spec.placeholder:
         return False, "placeholder capability is unavailable"
     if spec.max_horizon_minutes is not None and context.horizon_minutes > spec.max_horizon_minutes:
@@ -205,16 +209,20 @@ def _is_feasible(
     if action.expert_id == "safe_fallback" and state.fallback_attempted:
         return False, "safe fallback already attempted"
     if action.role is Role.WORKER and action.expert_id not in {"ensemble_synthesis", "safe_fallback"}:
+        if state.remaining_physical_worker_calls <= state.budget.reserved_fallback_worker_calls:
+            return False, "physical worker budget reserved for fallback"
         already = state.unique_numerical_forecasters
         would_add = action.expert_id not in already
         if would_add and len(already) >= state.budget.max_distinct_numerical_experts:
             return False, "maximum distinct numerical expert budget reached"
     if action.expert_id == "ensemble_synthesis":
-        worker_turns = _successful_worker_turns(state)
-        if not worker_turns:
-            return False, "synthesis requires at least one successful worker output"
+        worker_turns = _successful_base_worker_turns(state)
+        if len(worker_turns) < 2:
+            return False, "synthesis requires at least two distinct successful base worker outputs"
     if action.role is Role.VERIFIER and state.latest_candidate() is None:
         return False, "verifier requires a current candidate forecast"
+    if action.role is Role.VERIFIER and state.remaining_verifier_calls <= 0:
+        return False, "verifier budget exhausted"
     if state.remaining_deadline_ms < min(2.0, spec.typical_latency_ms):
         return False, "remaining deadline is too small for action"
     return True, ""
@@ -228,10 +236,13 @@ def _default_access_list(
     if spec.role is Role.THINKER:
         return []
     if spec.expert_id == "ensemble_synthesis":
-        return _successful_worker_turns(state)
+        return _successful_base_worker_turns(state)
     if spec.role is Role.VERIFIER:
         latest = state.latest_candidate()
-        return [] if latest is None else [latest.source_turn_id]
+        if latest is None:
+            return []
+        input_turns = [turn for turn in latest.input_turn_ids if turn != latest.source_turn_id]
+        return [*input_turns, latest.source_turn_id]
     if state.verifier_findings:
         requested = state.verifier_findings[-1]
         if requested.get("recommended_next_expert_or_verifier") == spec.expert_id:
@@ -249,6 +260,40 @@ def _successful_worker_turns(state: CoordinationState) -> list[int]:
         and "forecast" in message.structured_result
         and message.structured_result.get("forecast", {}).get("forecast_m") is not None
     ]
+
+
+def _successful_base_worker_turns(state: CoordinationState) -> list[int]:
+    turns = []
+    leaf_seen: set[str] = set()
+    for message in state.full_message_transcript:
+        if message.role is not Role.WORKER or message.expert_id == "ensemble_synthesis":
+            continue
+        forecast = message.structured_result.get("forecast")
+        if not forecast:
+            continue
+        leaves = forecast.get("leaf_experts", forecast.get("experts_used", [message.expert_id]))
+        if "safe_fallback" in leaves:
+            continue
+        if any(leaf in leaf_seen for leaf in leaves):
+            continue
+        leaf_seen.update(leaves)
+        turns.append(message.turn_id)
+    return turns
+
+
+def _only_fallback_resources_remain(state: CoordinationState) -> bool:
+    return state.remaining_turn_budget <= state.budget.reserved_fallback_turns
+
+
+def _is_reserved_fallback_action(state: CoordinationState, action: CoordinationAction) -> bool:
+    if action.expert_id == "safe_fallback":
+        return True
+    if action.expert_id != "physics_datum_verifier":
+        return False
+    candidate = state.latest_candidate()
+    if candidate is None:
+        return False
+    return "safe_fallback" in set(candidate.leaf_experts or candidate.experts_used)
 
 
 def _control_for(spec: ExpertSpec, subtask: SubtaskKind) -> ControlDecision:

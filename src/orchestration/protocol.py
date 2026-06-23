@@ -68,12 +68,40 @@ class ExecutionBudget:
     """Global and per-call limits enforced by the Ultra conductor."""
 
     max_turns: int = 5
+    max_coordination_turns: int | None = None
     max_distinct_numerical_experts: int = 3
+    max_physical_worker_calls: int = 3
+    max_verifier_calls: int = 3
     max_recursion_depth: int = 1
     deadline_ms: float = 2500.0
     per_expert_timeout_ms: float = 750.0
     max_parallel_actions: int = 1
     reserved_safe_fallback_calls: int = 1
+    reserved_fallback_worker_calls: int = 1
+    reserved_fallback_verifier_turns: int = 1
+
+    @property
+    def coordination_turn_limit(self) -> int:
+        return int(self.max_coordination_turns or self.max_turns)
+
+    @property
+    def reserved_fallback_turns(self) -> int:
+        return int(self.reserved_fallback_worker_calls + self.reserved_fallback_verifier_turns)
+
+
+@dataclass(frozen=True)
+class RoleInput:
+    """Typed input passed to thinkers, workers, synthesis, and verifiers."""
+
+    context: Any
+    subtask_kind: SubtaskKind
+    subtask_parameters: dict[str, Any]
+    visible_messages: list["CoordinationMessage"]
+    remaining_turn_budget: int
+    remaining_physical_worker_calls: int
+    remaining_verifier_calls: int
+    remaining_deadline_ms: float
+    requested_evidence: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -160,6 +188,9 @@ class CandidateForecast:
     method: str
     source_turn_id: int
     diagnostics: dict[str, Any] = field(default_factory=dict)
+    leaf_experts: list[str] = field(default_factory=list)
+    input_turn_ids: list[int] = field(default_factory=list)
+    verifier_adjustments: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return _to_jsonable(asdict(self))
