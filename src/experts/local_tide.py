@@ -3,12 +3,21 @@
 from __future__ import annotations
 
 from src.experts.base import ExpertForecast, ForecastExpert, clamp_confidence, interval
+from src.experts.capabilities import LATENCY_INSTANT, ExpertSpec
 
 
 class LocalTideExpert(ForecastExpert):
     """Use the best available local tide prediction for the target time."""
 
     model_name = "local_tide"
+    spec = ExpertSpec(
+        model_name="local_tide",
+        required_sources=("tide_prediction",),
+        requires_tide=True,
+        latency_class=LATENCY_INSTANT,
+        compute_cost=1.0,
+        notes="Deterministic tide schedule lookup; valid at all horizons.",
+    )
 
     def forecast(self, context) -> ExpertForecast:
         tide = context.local_tide_prediction or context.noaa_tide_prediction

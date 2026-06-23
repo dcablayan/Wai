@@ -12,8 +12,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score
-from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 from src.orchestration.learned_router import _feature_row
 
@@ -207,6 +206,8 @@ def train_router_from_replay(
         "feature_columns": list(X.columns),
         "classes": list(model.classes_),
         "config": asdict(cfg),
+        "n_train": int(len(X_train)),
+        "validation": "forward_time",
         "training_metadata": metadata.to_dict(orient="records"),
         "audit": asdict(audit),
     }
@@ -239,6 +240,163 @@ def train_router_from_replay(
     return artifact, report
 
 
+@dataclass
+class RouterPolicyEvaluation:
+    """Forward-validated comparison of routing policies on replay rows."""
+
+    n_test: int
+    validation: str
+    oracle_mae: float | None
+    rule_router_mae: float | None
+    learned_router_mae: float | None
+    routing_regret_m: float | None
+    learned_avg_expert_calls: float
+    rule_avg_expert_calls: float | None
+    fallback_rate: float | None
+    unavailable_rate: float | None
+
+
+def evaluate_router_policies(
+    replay: pd.DataFrame,
+    *,
+    config: RouterTrainingConfig | None = None,
+) -> RouterPolicyEvaluation:
+    """Compare oracle, rule, and learned routing with no future leakage.
+
+    A per-expert absolute-error regressor is trained on origin-time features +
+    expert identity (training fold only).  On the held-out fold the learned
+    router picks ``argmin`` predicted error; we report its realised MAE against
+    the oracle (best achievable per origin) and the rule/cascade's realised MAE.
+    """
+
+    cfg = config or RouterTrainingConfig()
+    rows = []
+    for _, row in replay.iterrows():
+        if pd.isna(row.get("actual_m")):
+            continue
+        errors = _parse_json(row["error_by_expert"], label="error_by_expert")
+        abs_errors = {
+            k: abs(float(v)) for k, v in errors.items()
+            if _is_finite(v)
+        }
+        if not abs_errors:
+            continue
+        rows.append({
+            "origin": _timestamp(row["forecast_origin_utc"]),
+            "station": row.get("target_station_id", "*"),
+            "features": _feature_row(
+                _parse_json(row["context_features"], label="context_features"),
+                _parse_json(row["missing_data_conditions"], label="missing_data_conditions"),
+            ),
+            "abs_errors": abs_errors,
+            "selected": _safe_list(row.get("selected_experts")),
+            "forecast_error_m": row.get("forecast_error_m"),
+            "expert_calls": row.get("expert_calls"),
+            "fallback_used": bool(row.get("fallback_used", False)),
+            "status": row.get("result_status", "available"),
+        })
+
+    if len(rows) < 4:
+        return RouterPolicyEvaluation(
+            n_test=0, validation="insufficient_rows", oracle_mae=None,
+            rule_router_mae=None, learned_router_mae=None, routing_regret_m=None,
+            learned_avg_expert_calls=1.0, rule_avg_expert_calls=None,
+            fallback_rate=None, unavailable_rate=None,
+        )
+
+    stations = {r["station"] for r in rows}
+    if len(stations) > 1:
+        validation = "station_held_out"
+        held = sorted(stations)[-1]
+        train_rows = [r for r in rows if r["station"] != held]
+        test_rows = [r for r in rows if r["station"] == held]
+    else:
+        validation = "forward_time"
+        rows.sort(key=lambda r: r["origin"])
+        n_test = max(1, int(round(len(rows) * cfg.test_fraction)))
+        train_rows = rows[: len(rows) - n_test]
+        test_rows = rows[len(rows) - n_test:]
+
+    if not train_rows or not test_rows:
+        return RouterPolicyEvaluation(
+            n_test=0, validation=validation, oracle_mae=None,
+            rule_router_mae=None, learned_router_mae=None, routing_regret_m=None,
+            learned_avg_expert_calls=1.0, rule_avg_expert_calls=None,
+            fallback_rate=None, unavailable_rate=None,
+        )
+
+    # Long-form per-(origin, expert) training frame.
+    train_records = []
+    train_targets = []
+    for r in train_rows:
+        for expert, err in r["abs_errors"].items():
+            rec = dict(r["features"])
+            rec["expert"] = expert
+            train_records.append(rec)
+            train_targets.append(err)
+    X_train = pd.get_dummies(pd.DataFrame(train_records), dummy_na=True)
+    feature_columns = list(X_train.columns)
+    model = DecisionTreeRegressor(max_depth=cfg.max_depth, random_state=cfg.random_state)
+    model.fit(X_train, np.array(train_targets, dtype=float))
+
+    learned_errs, oracle_errs, rule_errs = [], [], []
+    rule_calls = []
+    for r in test_rows:
+        candidates = list(r["abs_errors"].keys())
+        recs = []
+        for expert in candidates:
+            rec = dict(r["features"])
+            rec["expert"] = expert
+            recs.append(rec)
+        Xc = pd.get_dummies(pd.DataFrame(recs), dummy_na=True).reindex(
+            columns=feature_columns, fill_value=0
+        )
+        predicted = model.predict(Xc)
+        learned_pick = candidates[int(np.argmin(predicted))]
+        learned_errs.append(r["abs_errors"][learned_pick])
+        oracle_errs.append(min(r["abs_errors"].values()))
+        if r["forecast_error_m"] is not None and _is_finite(r["forecast_error_m"]):
+            rule_errs.append(abs(float(r["forecast_error_m"])))
+        if r["expert_calls"] is not None and _is_finite(r["expert_calls"]):
+            rule_calls.append(float(r["expert_calls"]))
+
+    oracle_mae = float(np.mean(oracle_errs)) if oracle_errs else None
+    learned_mae = float(np.mean(learned_errs)) if learned_errs else None
+    rule_mae = float(np.mean(rule_errs)) if rule_errs else None
+    regret = (learned_mae - oracle_mae) if (learned_mae is not None and oracle_mae is not None) else None
+    return RouterPolicyEvaluation(
+        n_test=len(test_rows),
+        validation=validation,
+        oracle_mae=oracle_mae,
+        rule_router_mae=rule_mae,
+        learned_router_mae=learned_mae,
+        routing_regret_m=regret,
+        learned_avg_expert_calls=1.0,
+        rule_avg_expert_calls=float(np.mean(rule_calls)) if rule_calls else None,
+        fallback_rate=float(np.mean([r["fallback_used"] for r in test_rows])),
+        unavailable_rate=float(np.mean([r["status"] != "available" for r in test_rows])),
+    )
+
+
+def _is_finite(value: Any) -> bool:
+    try:
+        return math.isfinite(float(value))
+    except (TypeError, ValueError):
+        return False
+
+
+def _safe_list(value: Any) -> list:
+    if isinstance(value, list):
+        return value
+    if value is None or (isinstance(value, float) and math.isnan(value)):
+        return []
+    try:
+        parsed = json.loads(value)
+        return parsed if isinstance(parsed, list) else []
+    except Exception:  # noqa: BLE001
+        return []
+
+
 def best_expert_label(errors: dict[str, Any]) -> str | None:
     """Return the expert with the smallest absolute finite error."""
 
@@ -260,19 +418,22 @@ def load_replay_csv(path: str | Path) -> pd.DataFrame:
 
 
 def _train_test_indices(y: pd.Series, cfg: RouterTrainingConfig) -> tuple[np.ndarray, np.ndarray]:
-    indices = np.arange(len(y))
-    if len(y) < 8 or y.nunique() < 2:
-        return indices, np.array([], dtype=int)
+    """Forward-time split: the first rows train, the most recent rows test.
 
-    label_counts = y.value_counts()
-    stratify = y if label_counts.min() >= 2 else None
-    train_idx, test_idx = train_test_split(
-        indices,
-        test_size=cfg.test_fraction,
-        random_state=cfg.random_state,
-        stratify=stratify,
-    )
-    return np.array(train_idx, dtype=int), np.array(test_idx, dtype=int)
+    Replay rows are produced in increasing forecast-origin order, so a positional
+    split is a forward-in-time (rolling-origin) holdout — never a random split,
+    which would leak future information into the training fold of a time series.
+    """
+
+    n = len(y)
+    indices = np.arange(n)
+    if n < 8 or y.nunique() < 2:
+        return indices, np.array([], dtype=int)
+    n_test = max(1, int(round(n * cfg.test_fraction)))
+    n_train = n - n_test
+    if n_train < 1:
+        return indices, np.array([], dtype=int)
+    return indices[:n_train], indices[n_train:]
 
 
 def _parse_json(value: Any, *, label: str) -> dict[str, Any]:

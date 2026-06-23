@@ -130,10 +130,16 @@ def test_pipeline_returns_structured_forecast():
     assert payload["experts_used"]
 
 
-def test_pipeline_uses_safe_fallback_when_local_qc_fails():
+def test_pipeline_excludes_local_persistence_and_uses_safe_tide_path_on_qc_fail():
+    # With the adaptive cascade, a failed-local-QC short horizon excludes
+    # local_persistence (and stale NOAA experts) and serves the valid tide-based
+    # path; it no longer needs to run the redundant safe_fallback expert because
+    # local_tide is itself a safe tide-only forecast.
     result = ForecastPipeline().run(_context(horizon_minutes=30, hohonu_qc="fail", noaa_periods=10))
     payload = result.to_dict()
     assert payload["status"] == "available"
-    assert payload["fallback_used"] is True
     assert "local_persistence" in payload["experts_excluded"]
-    assert "safe_fallback" in payload["experts_used"]
+    assert "failed QC" in payload["experts_excluded"]["local_persistence"]
+    assert payload["forecast_m"] is not None
+    # The forecast comes from a tide-based safe path.
+    assert any(e in payload["experts_used"] for e in ("local_tide", "safe_fallback"))

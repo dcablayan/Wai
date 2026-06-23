@@ -1,0 +1,71 @@
+{
+  "context_build": {
+    "mean_ms": 7.0239,
+    "p50_ms": 7.0411
+  },
+  "replay": {
+    "elapsed_s": 1.0992,
+    "rows": 126,
+    "rows_per_s": 114.632
+  },
+  "scenarios": {
+    "failed_qc": {
+      "experts_used": [
+        "local_tide",
+        "safe_fallback"
+      ],
+      "mean_expert_calls": 2,
+      "mean_ms": 0.0368,
+      "p50_ms": 0.0357,
+      "p95_ms": 0.0418,
+      "status": "available",
+      "unavailable_rate": 0.0
+    },
+    "large_residual": {
+      "experts_used": [
+        "noaa_residual",
+        "regional_to_local_residual"
+      ],
+      "mean_expert_calls": 2,
+      "mean_ms": 0.033,
+      "p50_ms": 0.0333,
+      "p95_ms": 0.0358,
+      "status": "available",
+      "unavailable_rate": 0.0
+    },
+    "normal": {
+      "experts_used": [
+        "local_tide",
+        "noaa_residual"
+      ],
+      "mean_expert_calls": 2,
+      "mean_ms": 0.0354,
+      "p50_ms": 0.0329,
+      "p95_ms": 0.0442,
+      "status": "available",
+      "unavailable_rate": 0.0
+    },
+    "short_fresh": {
+      "experts_used": [
+        "local_persistence"
+      ],
+      "mean_expert_calls": 1,
+      "mean_ms": 0.0302,
+      "p50_ms": 0.0287,
+      "p95_ms": 0.0351,
+      "status": "available",
+      "unavailable_rate": 0.0
+    },
+    "stale_noaa": {
+      "experts_used": [
+        "local_persistence"
+      ],
+      "mean_expert_calls": 1,
+      "mean_ms": 0.0296,
+      "p50_ms": 0.0274,
+      "p95_ms": 0.0367,
+      "status": "available",
+      "unavailable_rate": 0.0
+    }
+  }
+}

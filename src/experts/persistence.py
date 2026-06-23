@@ -3,12 +3,22 @@
 from __future__ import annotations
 
 from src.experts.base import ExpertForecast, ForecastExpert, clamp_confidence, interval
+from src.experts.capabilities import LATENCY_INSTANT, ExpertSpec
 
 
 class LocalPersistenceExpert(ForecastExpert):
     """Short-horizon local forecast from latest Hohonu level and trend."""
 
     model_name = "local_persistence"
+    spec = ExpertSpec(
+        model_name="local_persistence",
+        required_sources=("hohonu_observation",),
+        requires_local_obs=True,
+        max_horizon_minutes=12 * 60,
+        latency_class=LATENCY_INSTANT,
+        compute_cost=1.0,
+        notes="Latest local level plus recent trend; degrades past ~12h.",
+    )
 
     def forecast(self, context) -> ExpertForecast:
         obs = context.latest_hohonu_observation
