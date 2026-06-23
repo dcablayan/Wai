@@ -1,0 +1,249 @@
+{
+  "forecast_quality_before_after": {
+    "adaptive_cascade_cold": {
+      "escalation_rate": 0.0,
+      "fallback_rate": 0.0,
+      "interval_coverage": 0.6319,
+      "mae_m": 0.1895,
+      "peak_event_mae_m": null,
+      "unavailable_rate": 0.0
+    },
+    "adaptive_cascade_warm": {
+      "escalation_rate": 0.0,
+      "fallback_rate": 0.0,
+      "interval_coverage": 0.9451,
+      "mae_m": 0.1546,
+      "peak_event_mae_m": null,
+      "unavailable_rate": 0.0
+    },
+    "legacy_flat_router": {
+      "escalation_rate": 0.0,
+      "fallback_rate": 0.0,
+      "interval_coverage": 0.7308,
+      "mae_m": 0.1895,
+      "peak_event_mae_m": null,
+      "unavailable_rate": 0.0
+    }
+  },
+  "parallel_escalation": {
+    "speedup": 2.0,
+    "two_slow_experts_parallel_ms": 55.1,
+    "two_slow_experts_sequential_ms": 109.97
+  },
+  "replay": {
+    "legacy_double_run": {
+      "elapsed_s": 0.7997,
+      "rows": 182,
+      "rows_per_s": 227.58
+    },
+    "new_exhaustive_reuse": {
+      "elapsed_s": 0.0956,
+      "mean_expert_calls": 0.0,
+      "rows": 182,
+      "rows_per_s": 1903.51
+    },
+    "new_policy": {
+      "elapsed_s": 0.0881,
+      "escalation_rate": 0.0,
+      "fallback_rate": 0.0,
+      "interval_coverage": 0.6319,
+      "mae_m": 0.1895,
+      "mean_expert_calls": 1.0,
+      "peak_event_mae_m": null,
+      "rows": 182,
+      "rows_per_s": 2064.72,
+      "unavailable_rate": 0.0
+    },
+    "throughput_speedup_exhaustive": 8.36,
+    "throughput_speedup_policy": 9.07
+  },
+  "router_policy_eval": {
+    "fallback_rate": 0.0,
+    "learned_avg_expert_calls": 1.0,
+    "learned_router_mae": 0.16059428478081342,
+    "n_test": 46,
+    "oracle_mae": 0.11626900923706483,
+    "routing_regret_m": 0.044325275543748585,
+    "rule_avg_expert_calls": 0.0,
+    "rule_router_mae": 0.18019762436194253,
+    "unavailable_rate": 0.0,
+    "validation": "forward_time"
+  },
+  "scenarios": {
+    "expert_exception": {
+      "adaptive": {
+        "excluded": [],
+        "experts_used": [
+          "noaa_residual"
+        ],
+        "fallback_used": false,
+        "status": "available"
+      }
+    },
+    "large_noaa_residual": {
+      "adaptive": {
+        "early_stop_rate": 0.0,
+        "escalation_rate": 1.0,
+        "experts_used": [
+          "noaa_residual",
+          "regional_to_local_residual"
+        ],
+        "mean_expert_calls": 2,
+        "mean_ms": 0.1155,
+        "p50_ms": 0.1126,
+        "p95_ms": 0.1321,
+        "status": "available"
+      },
+      "legacy": {
+        "early_stop_rate": 0.0,
+        "escalation_rate": 0.0,
+        "experts_used": [
+          "noaa_residual",
+          "regional_to_local_residual"
+        ],
+        "mean_expert_calls": 2,
+        "mean_ms": 0.0727,
+        "p50_ms": 0.0703,
+        "p95_ms": 0.0842,
+        "status": "available"
+      }
+    },
+    "local_qc_failure": {
+      "adaptive": {
+        "early_stop_rate": 1.0,
+        "escalation_rate": 0.0,
+        "experts_used": [
+          "local_tide"
+        ],
+        "mean_expert_calls": 1,
+        "mean_ms": 0.0349,
+        "p50_ms": 0.0338,
+        "p95_ms": 0.0407,
+        "status": "available"
+      },
+      "legacy": {
+        "early_stop_rate": 0.0,
+        "escalation_rate": 0.0,
+        "experts_used": [
+          "local_tide"
+        ],
+        "mean_expert_calls": 2,
+        "mean_ms": 0.0208,
+        "p50_ms": 0.0205,
+        "p95_ms": 0.0219,
+        "status": "available"
+      }
+    },
+    "missing_tide_prediction": {
+      "adaptive": {
+        "early_stop_rate": 0.0,
+        "escalation_rate": 1.0,
+        "experts_used": [
+          "local_persistence"
+        ],
+        "mean_expert_calls": 1,
+        "mean_ms": 0.0354,
+        "p50_ms": 0.0347,
+        "p95_ms": 0.0398,
+        "status": "available"
+      },
+      "legacy": {
+        "early_stop_rate": 0.0,
+        "escalation_rate": 0.0,
+        "experts_used": [],
+        "mean_expert_calls": 2,
+        "mean_ms": 0.0059,
+        "p50_ms": 0.0058,
+        "p95_ms": 0.006,
+        "status": "unavailable"
+      }
+    },
+    "normal_stable_tide": {
+      "adaptive": {
+        "early_stop_rate": 1.0,
+        "escalation_rate": 0.0,
+        "experts_used": [
+          "noaa_residual"
+        ],
+        "mean_expert_calls": 1,
+        "mean_ms": 0.0402,
+        "p50_ms": 0.0389,
+        "p95_ms": 0.0457,
+        "status": "available"
+      },
+      "legacy": {
+        "early_stop_rate": 0.0,
+        "escalation_rate": 0.0,
+        "experts_used": [
+          "local_tide",
+          "noaa_residual"
+        ],
+        "mean_expert_calls": 2,
+        "mean_ms": 0.0407,
+        "p50_ms": 0.0381,
+        "p95_ms": 0.0493,
+        "status": "available"
+      }
+    },
+    "short_horizon_fresh_local": {
+      "adaptive": {
+        "early_stop_rate": 1.0,
+        "escalation_rate": 0.0,
+        "experts_used": [
+          "local_persistence"
+        ],
+        "mean_expert_calls": 1,
+        "mean_ms": 0.0399,
+        "p50_ms": 0.0393,
+        "p95_ms": 0.042,
+        "status": "available"
+      },
+      "legacy": {
+        "early_stop_rate": 0.0,
+        "escalation_rate": 0.0,
+        "experts_used": [
+          "local_persistence"
+        ],
+        "mean_expert_calls": 1,
+        "mean_ms": 0.0162,
+        "p50_ms": 0.0152,
+        "p95_ms": 0.0194,
+        "status": "available"
+      }
+    },
+    "stale_noaa_input": {
+      "adaptive": {
+        "early_stop_rate": 1.0,
+        "escalation_rate": 0.0,
+        "experts_used": [
+          "local_persistence"
+        ],
+        "mean_expert_calls": 1,
+        "mean_ms": 0.037,
+        "p50_ms": 0.036,
+        "p95_ms": 0.0435,
+        "status": "available"
+      },
+      "legacy": {
+        "early_stop_rate": 0.0,
+        "escalation_rate": 0.0,
+        "experts_used": [
+          "local_persistence"
+        ],
+        "mean_expert_calls": 1,
+        "mean_ms": 0.0156,
+        "p50_ms": 0.0152,
+        "p95_ms": 0.0168,
+        "status": "available"
+      }
+    }
+  },
+  "storm_surge_quality": {
+    "escalation_rate": 0.1813,
+    "fallback_rate": 0.0,
+    "interval_coverage": 0.7582,
+    "mae_m": 0.1778,
+    "peak_event_mae_m": 0.4067,
+    "unavailable_rate": 0.0
+  }
+}
