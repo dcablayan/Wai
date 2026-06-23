@@ -3,12 +3,22 @@
 from __future__ import annotations
 
 from src.experts.base import ExpertForecast, ForecastExpert, clamp_confidence, interval
+from src.experts.capabilities import LATENCY_INSTANT, ExpertSpec
 
 
 class SafeFallbackExpert(ForecastExpert):
     """Return a conservative tide-only baseline when live observations fail."""
 
     model_name = "safe_fallback"
+    spec = ExpertSpec(
+        model_name="safe_fallback",
+        required_sources=("tide_prediction",),
+        requires_tide=True,
+        is_safe_baseline=True,
+        latency_class=LATENCY_INSTANT,
+        compute_cost=0.5,
+        notes="Conservative tide-only baseline; the always-available safety net.",
+    )
 
     def forecast(self, context) -> ExpertForecast:
         tide = context.local_tide_prediction or context.noaa_tide_prediction

@@ -3,12 +3,23 @@
 from __future__ import annotations
 
 from src.experts.base import ExpertForecast, ForecastExpert, clamp_confidence, interval
+from src.experts.capabilities import LATENCY_FAST, ExpertSpec
 
 
 class NOAAResidualExpert(ForecastExpert):
     """Add recent NOAA non-tidal residual to the target tide prediction."""
 
     model_name = "noaa_residual"
+    spec = ExpertSpec(
+        model_name="noaa_residual",
+        required_sources=("noaa_observation", "tide_prediction"),
+        requires_noaa_obs=True,
+        requires_tide=True,
+        max_horizon_minutes=48 * 60,
+        latency_class=LATENCY_FAST,
+        compute_cost=1.5,
+        notes="Tide plus persisted NOAA observed-minus-tide residual.",
+    )
 
     def forecast(self, context) -> ExpertForecast:
         if context.noaa_tide_prediction is None:

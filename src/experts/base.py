@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, ClassVar
 
 import pandas as pd
+
+from src.experts.capabilities import ExpertSpec
 
 
 SUCCESS = "success"
@@ -29,6 +31,7 @@ class ExpertForecast:
     diagnostics: dict[str, Any] = field(default_factory=dict)
     status: str = SUCCESS
     message: str = ""
+    latency_ms: float = 0.0
 
     @property
     def ok(self) -> bool:
@@ -39,6 +42,7 @@ class ForecastExpert(ABC):
     """Abstract base class for deterministic forecasting experts."""
 
     model_name: str
+    spec: ClassVar[ExpertSpec]
 
     @abstractmethod
     def forecast(self, context: Any) -> ExpertForecast:
