@@ -10,6 +10,7 @@ from src.orchestration.cascade import (
     PostForecastAssessment,
 )
 from src.orchestration.combiner import CombinedForecast, ForecastCombiner
+from src.orchestration.coordinator_policy import LearnedCoordinatorPolicy
 from src.orchestration.context import (
     ForecastContext,
     build_forecast_context,
@@ -21,8 +22,17 @@ from src.orchestration.learned_router import (
     ShadowRecommendation,
 )
 from src.orchestration.prepared import PreparedStationData
+from src.orchestration.protocol import (
+    ControlDecision,
+    CoordinationAction,
+    CoordinationMessage,
+    ExecutionBudget as UltraExecutionBudget,
+    Role,
+    SubtaskKind,
+)
 from src.orchestration.router import RoutingDecision, RuleBasedOrchestrator
 from src.orchestration.skill_store import SkillEstimate, SkillStore
+from src.orchestration.ultra_conductor import UltraConductor
 from src.orchestration.verifier import ForecastVerifier
 
 __all__ = [
@@ -30,16 +40,21 @@ __all__ = [
     "CapabilityGate",
     "CascadePolicy",
     "CombinedForecast",
+    "ControlDecision",
+    "CoordinationAction",
+    "CoordinationMessage",
     "ExecutionBudget",
     "ExecutionTrace",
     "ForecastCombiner",
     "ForecastContext",
     "ForecastPlan",
     "ForecastVerifier",
+    "LearnedCoordinatorPolicy",
     "LearnedRouter",
     "LearnedRouterPrediction",
     "PostForecastAssessment",
     "PreparedStationData",
+    "Role",
     "RoutingDecision",
     "RuleBasedOrchestrator",
     "ShadowRecommendation",
@@ -47,4 +62,7 @@ __all__ = [
     "SkillStore",
     "build_forecast_context",
     "context_from_prepared",
+    "SubtaskKind",
+    "UltraConductor",
+    "UltraExecutionBudget",
 ]

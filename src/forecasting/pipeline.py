@@ -36,8 +36,11 @@ from src.experts import (
 from src.experts.base import ExpertForecast
 from src.orchestration.cascade import AdaptiveCascade, ExecutionBudget
 from src.orchestration.combiner import ForecastCombiner
+from src.orchestration.coordinator_policy import CoordinatorPolicy
+from src.orchestration.protocol import ExecutionBudget as UltraExecutionBudget
 from src.orchestration.router import RuleBasedOrchestrator
 from src.orchestration.skill_store import SkillStore
+from src.orchestration.ultra_conductor import UltraConductor
 from src.orchestration.verifier import ForecastVerifier
 
 LOGGER = logging.getLogger(__name__)
@@ -63,13 +66,29 @@ class ForecastResult:
     warnings: list[str] = field(default_factory=list)
     diagnostics: dict[str, Any] = field(default_factory=dict)
     status: str = "available"
+    mode: str = "mini"
+    coordinator_policy_source: str = "adaptive_cascade"
+    coordinator_artifact_version: str = "none"
+    number_of_turns: int = 0
+    number_of_unique_experts: int = 0
+    role_sequence: list[str] = field(default_factory=list)
+    executed_topology: dict[str, Any] = field(default_factory=dict)
+    termination_reason: str = "completed"
+    logical_actions: int = 0
+    physical_expert_calls: int = 0
+    reused_expert_outputs: int = 0
+    unique_experts: int = 0
+    verifier_calls: int = 0
+    thinker_calls: int = 0
+    worker_calls: int = 0
+    fallback_calls: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
 class ForecastPipeline:
-    """Rule-based expert orchestration, combination, and verification."""
+    """Forecast orchestration with mini, ultra, and legacy modes."""
 
     def __init__(
         self,
@@ -78,23 +97,32 @@ class ForecastPipeline:
         combiner: ForecastCombiner | None = None,
         verifier: ForecastVerifier | None = None,
         *,
+        mode: str | None = None,
         adaptive: bool = True,
         cascade: AdaptiveCascade | None = None,
         skill_store: SkillStore | None = None,
         budget: ExecutionBudget | None = None,
         learned_router: Any | None = None,
         interval_inflation: float = 1.8,
+        ultra_policy: CoordinatorPolicy | None = None,
+        ultra_budget: UltraExecutionBudget | None = None,
     ) -> None:
+        resolved_mode = mode or ("mini" if adaptive else "legacy")
+        if resolved_mode not in {"mini", "ultra", "legacy"}:
+            raise ValueError("ForecastPipeline mode must be one of: mini, ultra, legacy")
+        self.mode = resolved_mode
         self.experts = experts or default_experts(include_placeholders=False)
         self.orchestrator = orchestrator or RuleBasedOrchestrator()
         self.combiner = combiner or ForecastCombiner()
         self.verifier = verifier or ForecastVerifier()
-        self.adaptive = adaptive
+        self.adaptive = self.mode == "mini"
         self.skill_store = skill_store or SkillStore()
         self.cascade = cascade or AdaptiveCascade(skill_store=self.skill_store)
         self.budget = budget or ExecutionBudget()
         self.learned_router = learned_router
         self.interval_inflation = interval_inflation
+        self.ultra_policy = ultra_policy
+        self.ultra_budget = ultra_budget
 
     # ------------------------------------------------------------------ #
     def run(
@@ -105,7 +133,9 @@ class ForecastPipeline:
         budget: ExecutionBudget | None = None,
         context_build_ms: float = 0.0,
     ) -> ForecastResult:
-        if not self.adaptive:
+        if self.mode == "ultra":
+            return self._run_ultra(context)
+        if self.mode == "legacy" or not self.adaptive:
             return self._run_legacy(context, precomputed_forecasts)
         return self._run_adaptive(
             context,
@@ -220,6 +250,8 @@ class ForecastPipeline:
             route_source=trace.route_source,
             shadow=shadow,
         )
+        topology = _trace_topology(results, verified.experts_used)
+        telemetry = _trace_telemetry(results, trace, fallback_used)
         return ForecastResult(
             station_id=context.target_station_id,
             forecast_time_utc=str(context.forecast_time_utc),
@@ -236,6 +268,138 @@ class ForecastPipeline:
             fallback_used=fallback_used,
             warnings=warnings,
             diagnostics=diagnostics,
+            mode="mini",
+            coordinator_policy_source="adaptive_cascade",
+            coordinator_artifact_version="none",
+            number_of_turns=telemetry["logical_actions"],
+            number_of_unique_experts=telemetry["unique_experts"],
+            role_sequence=topology["role_sequence"],
+            executed_topology=topology["graph"],
+            termination_reason="verified_combined_forecast",
+            **telemetry,
+        )
+
+    # ------------------------------------------------------------------ #
+    def _run_ultra(self, context) -> ForecastResult:
+        conductor = UltraConductor(
+            forecast_experts=self.experts,
+            policy=self.ultra_policy,
+            budget=self.ultra_budget,
+        )
+        run = conductor.run(context)
+        state = run.state
+        telemetry = state.telemetry().to_dict()
+        transcript = [message.to_dict() for message in state.full_message_transcript]
+        actions = [action.to_dict() for action in state.action_transcript]
+        role_sequence = [message.role.value for message in state.full_message_transcript]
+        excluded = {
+            expert_id: "failed capability or safety mask at initialization"
+            for expert_id, ok in state.capability_masks.items()
+            if not ok
+        }
+        if run.candidate is None:
+            warnings = [
+                *run.warnings,
+                "Ultra did not produce an independently accepted numerical forecast",
+            ]
+            return self._ultra_unavailable_result(
+                context,
+                excluded,
+                warnings,
+                state,
+                telemetry,
+                role_sequence,
+                actions,
+                transcript,
+            )
+
+        candidate = run.candidate
+        return ForecastResult(
+            station_id=context.target_station_id,
+            forecast_time_utc=str(context.forecast_time_utc),
+            target_time_utc=str(context.target_time_utc),
+            horizon_minutes=context.horizon_minutes,
+            forecast_m=round(candidate.forecast_m, 4),
+            lower_m=round(candidate.lower_m, 4),
+            upper_m=round(candidate.upper_m, 4),
+            confidence=round(candidate.confidence, 4),
+            regime=_ultra_regime(state),
+            experts_used=list(candidate.experts_used),
+            experts_excluded=excluded,
+            combination_method=candidate.method,
+            fallback_used="safe_fallback" in candidate.experts_used or telemetry.get("fallback_calls", 0) > 0,
+            warnings=run.warnings,
+            diagnostics={
+                "context": context.diagnostics,
+                "ultra": {
+                    "actions": actions,
+                    "transcript": transcript,
+                    "workflow_graph": state.topology_dict(),
+                    "verifier_findings": state.verifier_findings,
+                    "state_features": state.encoded_state,
+                    "candidate_diagnostics": candidate.diagnostics,
+                    "telemetry": telemetry,
+                },
+            },
+            status=run.status,
+            mode="ultra",
+            coordinator_policy_source=state.coordinator_policy_source,
+            coordinator_artifact_version=state.coordinator_artifact_version,
+            number_of_turns=telemetry["logical_actions"],
+            number_of_unique_experts=telemetry["unique_experts"],
+            role_sequence=role_sequence,
+            executed_topology=state.topology_dict(),
+            termination_reason=state.termination_reason or "completed",
+            **telemetry,
+        )
+
+    def _ultra_unavailable_result(
+        self,
+        context,
+        excluded,
+        warnings,
+        state,
+        telemetry,
+        role_sequence,
+        actions,
+        transcript,
+    ) -> ForecastResult:
+        return ForecastResult(
+            station_id=context.target_station_id,
+            forecast_time_utc=str(context.forecast_time_utc),
+            target_time_utc=str(context.target_time_utc),
+            horizon_minutes=context.horizon_minutes,
+            forecast_m=None,
+            lower_m=None,
+            upper_m=None,
+            confidence=0.0,
+            regime="ultra_unavailable",
+            experts_used=[],
+            experts_excluded=excluded,
+            combination_method="ultra_conductor",
+            fallback_used=telemetry.get("fallback_calls", 0) > 0,
+            warnings=warnings,
+            diagnostics={
+                "context": context.diagnostics,
+                "ultra": {
+                    "actions": actions,
+                    "transcript": transcript,
+                    "workflow_graph": state.topology_dict(),
+                    "verifier_findings": state.verifier_findings,
+                    "state_features": state.encoded_state,
+                    "telemetry": telemetry,
+                },
+            },
+            status="unavailable",
+            mode="ultra",
+            coordinator_policy_source=state.coordinator_policy_source,
+            coordinator_artifact_version=state.coordinator_artifact_version,
+            number_of_turns=telemetry["logical_actions"],
+            number_of_unique_experts=telemetry["unique_experts"],
+            role_sequence=role_sequence,
+            executed_topology=state.topology_dict(),
+            termination_reason=state.termination_reason or "unavailable",
+            **telemetry,
         )
 
     # ------------------------------------------------------------------ #
@@ -371,6 +535,15 @@ class ForecastPipeline:
             regime=regime, experts_used=[], experts_excluded=excluded,
             combination_method=method, fallback_used=fallback_used,
             warnings=warnings, diagnostics=diagnostics, status="unavailable",
+            mode="mini",
+            coordinator_policy_source="adaptive_cascade",
+            coordinator_artifact_version="none",
+            number_of_turns=_trace_telemetry(results, trace, fallback_used)["logical_actions"],
+            number_of_unique_experts=_trace_telemetry(results, trace, fallback_used)["unique_experts"],
+            role_sequence=_trace_topology(results, [])["role_sequence"],
+            executed_topology=_trace_topology(results, [])["graph"],
+            termination_reason="unavailable",
+            **_trace_telemetry(results, trace, fallback_used),
         )
 
     # ------------------------------------------------------------------ #
@@ -409,6 +582,8 @@ class ForecastPipeline:
         if verified is None:
             return self._legacy_unavailable(context, decision, excluded, fallback_used, warnings, forecasts)
 
+        topology = _rule_topology(decision.selected_experts, verified.experts_used)
+        telemetry = _rule_telemetry(decision.selected_experts, fallback_used)
         return ForecastResult(
             station_id=context.target_station_id,
             forecast_time_utc=str(context.forecast_time_utc),
@@ -433,6 +608,15 @@ class ForecastPipeline:
                 "context": context.diagnostics,
                 "experts": _forecast_diagnostics(forecasts),
             },
+            mode="legacy",
+            coordinator_policy_source="rule_based_router",
+            coordinator_artifact_version="none",
+            number_of_turns=telemetry["logical_actions"],
+            number_of_unique_experts=telemetry["unique_experts"],
+            role_sequence=topology["role_sequence"],
+            executed_topology=topology["graph"],
+            termination_reason="verified_combined_forecast",
+            **telemetry,
         )
 
     def _run_selected(self, selected, context, precomputed_forecasts) -> list[ExpertForecast]:
@@ -454,6 +638,7 @@ class ForecastPipeline:
         return forecasts
 
     def _legacy_unavailable(self, context, decision, excluded, fallback_used, warnings, forecasts) -> ForecastResult:
+        telemetry = _rule_telemetry([], fallback_used)
         return ForecastResult(
             station_id=context.target_station_id,
             forecast_time_utc=str(context.forecast_time_utc),
@@ -468,6 +653,15 @@ class ForecastPipeline:
                 "experts": _forecast_diagnostics(forecasts),
             },
             status="unavailable",
+            mode="legacy",
+            coordinator_policy_source="rule_based_router",
+            coordinator_artifact_version="none",
+            number_of_turns=telemetry["logical_actions"],
+            number_of_unique_experts=telemetry["unique_experts"],
+            role_sequence=[],
+            executed_topology={},
+            termination_reason="unavailable",
+            **telemetry,
         )
 
 
@@ -509,3 +703,139 @@ def _forecast_diagnostics(forecasts: list[ExpertForecast]) -> dict[str, dict[str
         }
         for forecast in forecasts
     }
+
+
+def _trace_telemetry(results, trace, fallback_used: bool) -> dict[str, int]:
+    worker_calls = len(results)
+    verifier_calls = 1 if results else 0
+    return {
+        "logical_actions": worker_calls + verifier_calls,
+        "physical_expert_calls": int(getattr(trace, "expert_calls", worker_calls)),
+        "reused_expert_outputs": int(getattr(trace, "cache_hits", 0)),
+        "unique_experts": len({result.name for result in results}) + verifier_calls,
+        "verifier_calls": verifier_calls,
+        "thinker_calls": 0,
+        "worker_calls": worker_calls,
+        "fallback_calls": 1 if fallback_used else 0,
+    }
+
+
+def _trace_topology(results, accepted_experts: list[str]) -> dict[str, Any]:
+    nodes = []
+    access_edges = []
+    dependency_edges = []
+    for idx, result in enumerate(results):
+        status = "success" if result.name in accepted_experts or result.ok else "failed"
+        if getattr(result, "timed_out", False):
+            status = "timeout"
+        nodes.append({
+            "turn_id": idx,
+            "expert_id": result.name,
+            "role": "WORKER",
+            "subtask_kind": "MINI_ADAPTIVE_FORECAST",
+            "status": status,
+            "parallel_group": None,
+            "latency_ms": float(getattr(result, "latency_ms", 0.0)),
+        })
+    verifier_turn = len(nodes)
+    if nodes:
+        nodes.append({
+            "turn_id": verifier_turn,
+            "expert_id": "forecast_verifier",
+            "role": "VERIFIER",
+            "subtask_kind": "MINI_VERIFY_COMBINED",
+            "status": "accepted" if accepted_experts else "unavailable",
+            "parallel_group": None,
+            "latency_ms": 0.0,
+        })
+        for idx in range(verifier_turn):
+            edge = {
+                "source_turn_id": idx,
+                "target_turn_id": verifier_turn,
+                "edge_type": "mini_combiner_input",
+            }
+            access_edges.append(edge)
+            dependency_edges.append(edge)
+    return {
+        "role_sequence": ["WORKER"] * len(results) + (["VERIFIER"] if nodes else []),
+        "graph": {
+            "nodes": nodes,
+            "dependency_edges": dependency_edges,
+            "access_edges": access_edges,
+            "parallel_groups": {},
+            "final_accepted_node": verifier_turn if accepted_experts else None,
+        },
+    }
+
+
+def _rule_telemetry(selected_experts: list[str], fallback_used: bool) -> dict[str, int]:
+    worker_calls = len(selected_experts)
+    verifier_calls = 1 if selected_experts else 0
+    return {
+        "logical_actions": worker_calls + verifier_calls,
+        "physical_expert_calls": worker_calls,
+        "reused_expert_outputs": 0,
+        "unique_experts": len(set(selected_experts)) + verifier_calls,
+        "verifier_calls": verifier_calls,
+        "thinker_calls": 0,
+        "worker_calls": worker_calls,
+        "fallback_calls": 1 if fallback_used else 0,
+    }
+
+
+def _rule_topology(selected_experts: list[str], accepted_experts: list[str]) -> dict[str, Any]:
+    nodes = []
+    access_edges = []
+    dependency_edges = []
+    for idx, expert_id in enumerate(selected_experts):
+        nodes.append({
+            "turn_id": idx,
+            "expert_id": expert_id,
+            "role": "WORKER",
+            "subtask_kind": "LEGACY_RULE_FORECAST",
+            "status": "success" if expert_id in accepted_experts else "filtered",
+            "parallel_group": None,
+            "latency_ms": 0.0,
+        })
+    verifier_turn = len(nodes)
+    if selected_experts:
+        nodes.append({
+            "turn_id": verifier_turn,
+            "expert_id": "forecast_verifier",
+            "role": "VERIFIER",
+            "subtask_kind": "LEGACY_VERIFY_COMBINED",
+            "status": "accepted",
+            "parallel_group": None,
+            "latency_ms": 0.0,
+        })
+        for idx in range(len(selected_experts)):
+            edge = {
+                "source_turn_id": idx,
+                "target_turn_id": verifier_turn,
+                "edge_type": "legacy_combiner_input",
+            }
+            access_edges.append(edge)
+            dependency_edges.append(edge)
+    return {
+        "role_sequence": ["WORKER"] * len(selected_experts) + (["VERIFIER"] if selected_experts else []),
+        "graph": {
+            "nodes": nodes,
+            "dependency_edges": dependency_edges,
+            "access_edges": access_edges,
+            "parallel_groups": {},
+            "final_accepted_node": verifier_turn if selected_experts else None,
+        },
+    }
+
+
+def _ultra_regime(state) -> str:
+    for message in reversed(state.full_message_transcript):
+        if message.role.value == "THINKER":
+            mechanism = message.structured_result.get("suspected_forcing_mechanism")
+            if mechanism:
+                return str(mechanism)
+    if state.current_event_risk_estimate >= 0.35:
+        return "event_risk"
+    if state.current_difficulty_estimate >= 0.45:
+        return "difficult_forecast"
+    return "ultra_coordinated"

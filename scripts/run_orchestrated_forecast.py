@@ -17,11 +17,12 @@ from src.orchestration.context import build_forecast_context
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Run Wai's rule-based forecast orchestrator.")
+    parser = argparse.ArgumentParser(description="Run Wai's forecast orchestrator.")
     parser.add_argument("--station-id", default="HOHONU_TEST")
     parser.add_argument("--noaa-station-id", default="NOAA_TEST")
     parser.add_argument("--forecast-time", default="2024-01-01T18:00:00Z")
     parser.add_argument("--horizon-minutes", type=int, default=360)
+    parser.add_argument("--mode", choices=["mini", "ultra", "legacy"], default="mini")
     args = parser.parse_args(argv)
 
     hohonu = mock_hohonu_observations(args.station_id, periods=300)
@@ -38,7 +39,7 @@ def main(argv: list[str] | None = None) -> int:
         noaa_tide_predictions=noaa_tide,
         station_pair=StationPair(args.station_id, args.noaa_station_id),
     )
-    result = ForecastPipeline().run(context)
+    result = ForecastPipeline(mode=args.mode).run(context)
     print(json.dumps(result.to_dict(), indent=2, sort_keys=True))
     return 0
 

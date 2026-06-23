@@ -94,19 +94,28 @@ make dashboard
 conformal, research visual, scientific audit, and summary artifacts. The
 dashboard is a local Streamlit viewer for the synthetic demo data.
 
-## Forecast Orchestrator Foundation
+## Forecast Orchestrator
 
-Wai now includes a deterministic regional-to-local forecasting foundation under
+Wai now includes deterministic Mini and multi-turn Ultra orchestration under
 `src/forecasting`, `src/orchestration`, `src/experts`, and the canonical
 Hohonu/NOAA adapters in `src/data`. It converts local Hohonu observations and
 NOAA observations/predictions into one canonical schema, routes to numerical
-experts, combines successful forecasts, verifies safety constraints, and can
-produce a historical replay table for future router training.
+experts, verifies safety constraints, and can produce historical replay and
+trajectory tables for future coordinator training.
+
+Modes:
+
+- `mini`: fast deterministic rule-router path.
+- `ultra`: Wai Ultra, a Fugu-inspired numerical forecast conductor with roles,
+  transcripts, access lists, workflow graphs, verifier termination, and
+  bootstrap or learned coordination policies.
+- `legacy`: original flat rule router retained for regression testing.
 
 Run an offline example forecast:
 
 ```bash
-python -m scripts.run_orchestrated_forecast --horizon-minutes 360
+python -m scripts.run_orchestrated_forecast --mode mini --horizon-minutes 360
+python -m scripts.run_orchestrated_forecast --mode ultra --horizon-minutes 360
 ```
 
 Generate a mocked historical replay dataset:
@@ -121,9 +130,15 @@ Train an advisory learned router from replay rows:
 python -m scripts.train_router --replay reports/routing_replay_mock.csv
 ```
 
+Run the local Ultra smoke benchmark:
+
+```bash
+python -m scripts.run_ultra_benchmark
+```
+
 See [docs/forecast_orchestrator.md](docs/forecast_orchestrator.md) for the data
-flow, station pairing, datum rules, expert descriptions, environment variables,
-example output, and limitations.
+flow, station pairing, datum rules, Mini versus Ultra behavior, coordination
+protocol, training pipeline, benchmarks, and limitations.
 
 Generated research visuals are written to [docs/images](docs/images):
 
