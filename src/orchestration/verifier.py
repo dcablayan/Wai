@@ -24,6 +24,7 @@ _EXPERT_SOURCE_DEPENDENCIES: dict[str, set[str]] = {
     "local_tide": set(),  # deterministic tide schedule, no live obs staleness
     "noaa_residual": {"noaa"},
     "regional_to_local_residual": {"noaa"},
+    "harmonic_fallback": {"hohonu"},
     "safe_fallback": set(),
 }
 

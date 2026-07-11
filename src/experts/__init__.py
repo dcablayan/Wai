@@ -3,6 +3,7 @@
 from src.experts.base import ExpertForecast, ForecastExpert
 from src.experts.capabilities import ExpertSpec
 from src.experts.fallback import SafeFallbackExpert
+from src.experts.harmonic_fallback import HarmonicFallbackExpert
 from src.experts.local_tide import LocalTideExpert
 from src.experts.noaa_residual import NOAAResidualExpert
 from src.experts.persistence import LocalPersistenceExpert
@@ -17,6 +18,7 @@ __all__ = [
     "ExpertForecast",
     "ExpertSpec",
     "ForecastExpert",
+    "HarmonicFallbackExpert",
     "LocalPersistenceExpert",
     "LocalTideExpert",
     "NOAAResidualExpert",

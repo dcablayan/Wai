@@ -75,6 +75,42 @@ class ForecastContext:
     def noaa_qc_ok(self) -> bool:
         return is_good_qc(self.qc_status.get("noaa", "unknown"))
 
+    # Role-based aliases. "hohonu" and "noaa" are historical key names for the
+    # *local gauge* and *regional reference* roles; any provider can fill
+    # either role. New code should prefer these names.
+
+    @property
+    def latest_local_observation(self) -> dict[str, Any] | None:
+        return self.latest_hohonu_observation
+
+    @property
+    def latest_regional_observation(self) -> dict[str, Any] | None:
+        return self.latest_noaa_observation
+
+    @property
+    def recent_local_observations(self) -> pd.DataFrame:
+        return self.recent_hohonu_observations
+
+    @property
+    def recent_regional_observations(self) -> pd.DataFrame:
+        return self.recent_noaa_observations
+
+    @property
+    def local_is_fresh(self) -> bool:
+        return self.hohonu_is_fresh
+
+    @property
+    def regional_is_fresh(self) -> bool:
+        return self.noaa_is_fresh
+
+    @property
+    def local_qc_ok(self) -> bool:
+        return self.hohonu_qc_ok
+
+    @property
+    def regional_qc_ok(self) -> bool:
+        return self.noaa_qc_ok
+
     def noaa_residual_at(self, when: pd.Timestamp) -> float | None:
         """Observed NOAA residual at or before ``when`` (leakage-safe)."""
 
@@ -97,13 +133,37 @@ def build_forecast_context(
     recent_hours: float = 6.0,
     recent_model_performance: dict[str, float] | None = None,
     prepared: PreparedStationData | None = None,
+    local_observations: pd.DataFrame | None = None,
+    regional_observations: pd.DataFrame | None = None,
+    regional_tide_predictions: pd.DataFrame | None = None,
 ) -> ForecastContext:
     """Build a leakage-safe context at one forecast origin.
 
     ``prepared`` may be supplied to reuse an already-indexed
     :class:`PreparedStationData` (the fast historical-replay path).  When absent,
     the frames are indexed once here.
+
+    ``local_observations`` / ``regional_observations`` /
+    ``regional_tide_predictions`` are role-based aliases for the historical
+    ``hohonu_observations`` / ``noaa_observations`` / ``noaa_tide_predictions``
+    parameters: the local role is the target gauge from any provider, and the
+    regional role is the reference station from any provider.
     """
+
+    if local_observations is not None:
+        if hohonu_observations is not None:
+            raise ValueError("Pass either hohonu_observations or local_observations, not both")
+        hohonu_observations = local_observations
+    if regional_observations is not None:
+        if noaa_observations is not None:
+            raise ValueError("Pass either noaa_observations or regional_observations, not both")
+        noaa_observations = regional_observations
+    if regional_tide_predictions is not None:
+        if noaa_tide_predictions is not None:
+            raise ValueError(
+                "Pass either noaa_tide_predictions or regional_tide_predictions, not both"
+            )
+        noaa_tide_predictions = regional_tide_predictions
 
     if prepared is None:
         prepared = PreparedStationData.build(

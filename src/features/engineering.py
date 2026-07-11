@@ -67,15 +67,42 @@ def add_temporal_covariates(
     return df
 
 
+# Physical durations behind the historical step-count defaults, which assumed
+# the 6-minute NOAA cadence. Cadence-aware callers pass ``cadence_minutes`` so
+# these same durations hold on any regular grid.
+LAG_MINUTES = [6.0, 12.0, 24.0, 60.0, 120.0, 240.0]
+WINDOW_MINUTES = [60.0, 240.0, 1440.0]
+DEFAULT_CADENCE_MINUTES = 6.0
+
+
+def _steps(minutes_list: List[float], cadence_minutes: float) -> List[int]:
+    """Convert physical durations to whole grid steps, deduplicated in order."""
+    if cadence_minutes <= 0:
+        raise ValueError("cadence_minutes must be positive")
+    steps: List[int] = []
+    for minutes in minutes_list:
+        step = max(1, int(round(minutes / cadence_minutes)))
+        if step not in steps:
+            steps.append(step)
+    return steps
+
+
 def add_lag_features(
     df: pd.DataFrame,
     lags: Optional[List[int]] = None,
     value_col: str = "water_level",
+    cadence_minutes: Optional[float] = None,
 ) -> pd.DataFrame:
-    """Add lagged water-level features (in 6-min steps by default)."""
+    """Add lagged water-level features.
+
+    ``lags`` are grid steps. When omitted they cover ``LAG_MINUTES`` at the
+    given cadence (default 6-minute grid, matching the historical
+    ``[1, 2, 4, 10, 20, 40]`` steps). The series must already be on a regular
+    grid — see ``src.data.regularize`` for irregular provider data.
+    """
     df = df.copy()
     if lags is None:
-        lags = [1, 2, 4, 10, 20, 40]  # ~6min, 12min, 24min, 1hr, 2hr, 4hr
+        lags = _steps(LAG_MINUTES, cadence_minutes or DEFAULT_CADENCE_MINUTES)
     for lag in lags:
         df[f"{value_col}_lag{lag}"] = df[value_col].shift(lag)
     return df
@@ -85,6 +112,7 @@ def add_rolling_features(
     df: pd.DataFrame,
     windows: Optional[List[int]] = None,
     value_col: str = "water_level",
+    cadence_minutes: Optional[float] = None,
 ) -> pd.DataFrame:
     """Add rolling mean and std features.
 
@@ -94,7 +122,7 @@ def add_rolling_features(
     """
     df = df.copy()
     if windows is None:
-        windows = [10, 40, 240]  # ~1hr, 4hr, 24hr at 6-min resolution
+        windows = _steps(WINDOW_MINUTES, cadence_minutes or DEFAULT_CADENCE_MINUTES)
     shifted = df[value_col].shift(1)
     for w in windows:
         df[f"{value_col}_rmean{w}"] = shifted.rolling(w, min_periods=1).mean()
@@ -106,6 +134,7 @@ NON_FEATURE_COLS = {
     "timestamp", "station_id", "datum", "units", "lat", "lon", "source",
     "_source_row", "observed_water_level", "observation_source",
     "_target_h", "noaa_prediction", "prediction_source",
+    "is_interpolated", "latency_seconds",
 }
 
 
@@ -128,6 +157,7 @@ def feature_columns(df: pd.DataFrame, target_col: str = "water_level") -> list[s
 def build_feature_frame(
     df: pd.DataFrame,
     target_col: str = "water_level",
+    cadence_minutes: Optional[float] = None,
 ) -> pd.DataFrame:
     """Build an aligned feature DataFrame from a single-station time series.
 
@@ -137,22 +167,30 @@ def build_feature_frame(
     keeps ``timestamp``, the target column, and ``_source_row`` so callers can
     align predictions, observations, and plot timestamps without rebuilding the
     feature matrix on sliced data.
+
+    ``cadence_minutes`` is the series' regular sampling interval; lag and
+    rolling windows are sized so they always span the same physical durations.
+    Omitting it keeps the historical 6-minute assumption.
     """
     df = df.copy().sort_values("timestamp").reset_index(drop=True)
     df["_source_row"] = np.arange(len(df), dtype=int)
     df = add_tidal_harmonics(df)
     df = add_temporal_covariates(df)
-    df = add_lag_features(df)
-    df = add_rolling_features(df)
-    return df.dropna().reset_index(drop=True)
+    df = add_lag_features(df, cadence_minutes=cadence_minutes)
+    df = add_rolling_features(df, cadence_minutes=cadence_minutes)
+    # Drop rows only for NaNs that reach the model (lag warm-up, data gaps).
+    # NaN metadata such as missing lat/lon must not erase valid samples.
+    subset = feature_columns(df, target_col=target_col) + [target_col]
+    return df.dropna(subset=subset).reset_index(drop=True)
 
 
 def build_feature_matrix(
     df: pd.DataFrame,
     target_col: str = "water_level",
+    cadence_minutes: Optional[float] = None,
 ) -> Tuple[pd.DataFrame, pd.Series]:
     """Build (X, y) from a single-station time series."""
-    df = build_feature_frame(df, target_col=target_col)
+    df = build_feature_frame(df, target_col=target_col, cadence_minutes=cadence_minutes)
 
     feature_cols = feature_columns(df, target_col=target_col)
     return df[feature_cols], df[target_col]

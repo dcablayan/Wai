@@ -24,6 +24,7 @@ from typing import Any
 
 from src.experts import (
     ForecastExpert,
+    HarmonicFallbackExpert,
     LearnedLocalResidualExpert,
     LocalPersistenceExpert,
     LocalTideExpert,
@@ -680,6 +681,7 @@ def default_experts(*, include_placeholders: bool = False) -> dict[str, Forecast
         LocalTideExpert(),
         NOAAResidualExpert(),
         RegionalToLocalResidualExpert(),
+        HarmonicFallbackExpert(),
         SafeFallbackExpert(),
     ]
     if include_placeholders:

@@ -140,6 +140,36 @@ See [docs/forecast_orchestrator.md](docs/forecast_orchestrator.md) for the data
 flow, station pairing, datum rules, Mini versus Ultra behavior, coordination
 protocol, training pipeline, benchmarks, and limitations.
 
+## Plugging In Any Tide Gauge
+
+Wai's ingestion layer is provider-agnostic. Any gauge — a vendor API, a CSV
+export, an in-memory frame — plugs in through the `DataSource` registry
+(`src/data/sources.py`) and is normalized to the canonical schema, snapped to
+a regular grid at its native cadence, despiked, and datum-converted when
+per-station offsets are configured. Gauges with no NOAA counterpart still get
+tide-shaped forecasts from the `harmonic_fallback` expert, which fits
+constituents to the gauge's own history.
+
+Forecast directly from any gauge export:
+
+```bash
+python -m scripts.run_gauge_forecast \
+    --csv my_gauge.csv --station-id MY-GAUGE-01 \
+    --timestamp-col time --water-level-col level_ft --units ft
+```
+
+Or register stations once in a JSON catalog and forecast by id:
+
+```bash
+python -m scripts.run_gauge_forecast --catalog data/stations.json \
+    --station-id MY-GAUGE-01
+```
+
+See [docs/onboarding_new_gauge.md](docs/onboarding_new_gauge.md) for the
+catalog format, datum offsets, and how to add a provider adapter, and
+[docs/pluggability_audit.md](docs/pluggability_audit.md) for the audit that
+drove this design.
+
 Generated research visuals are written to [docs/images](docs/images):
 
 - `actual_vs_predicted.svg`
