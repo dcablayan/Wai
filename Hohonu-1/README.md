@@ -37,11 +37,11 @@ Minimum:
 - `statsmodels`
 - `timezonefinder`
 
-Optional ML extras:
+Offline-only ML extras:
 
 - `tensorflow` (for LSTM candidates)
 - `torch` (for PINN candidates)
-- `fastapi`, `uvicorn` (for API server)
+- `tensorflow` and `torch` are never enabled through the HTTP API
 
 Core pipeline code has local fallbacks that still run with the core requirements
 when these optional packages are missing.
@@ -49,17 +49,14 @@ when these optional packages are missing.
 ## Installation
 
 ```bash
-cd /Users/dylancablayan/Hohonu-1
-python -m venv .venv
-source .venv/bin/activate
-pip install -U pip
-pip install numpy pandas scikit-learn statsmodels timezonefinder
+cd /path/to/Wai
+uv sync --locked --all-extras
 ```
 
 Optional extras:
 
 ```bash
-pip install tensorflow torch fastapi uvicorn
+uv pip install tensorflow torch
 ```
 
 ## Data prerequisites
@@ -80,7 +77,7 @@ If these files are absent, behavior depends on available optional modules:
 ## Running the pipeline for one node
 
 ```bash
-python hohonu_driver_script.py <node_id> --strategy auto --candidate-profile auto --metadata
+uv run python hohonu_driver_script.py <node_id> --strategy auto --candidate-profile auto --metadata
 ```
 
 Useful strategies:
@@ -104,13 +101,13 @@ Common switches:
 Run full combo benchmark with leaderboard + single/meta/ensemble/mix summaries:
 
 ```bash
-python run_combo_benchmark.py <node_id> --mode all --candidate-profile broad --json
+uv run python run_combo_benchmark.py <node_id> --mode all --candidate-profile broad --json
 ```
 
 Run with rolling stability analysis + family health:
 
 ```bash
-python run_combo_benchmark.py <node_id> \
+uv run python run_combo_benchmark.py <node_id> \
   --mode all \
   --rolling-backtest \
   --rolling-folds 6 \
@@ -129,7 +126,7 @@ This returns:
 ## Scheduled execution
 
 ```bash
-python pipeline_scheduler.py <node_a> <node_b> \
+uv run python pipeline_scheduler.py <node_a> <node_b> \
   --strategy mix \
   --candidate-profile auto \
   --interval-seconds 3600 \
@@ -145,7 +142,7 @@ Outputs:
 ## API server
 
 ```bash
-python api_server.py
+WAI_API_KEY='replace-with-a-secret' uv run python Hohonu-1/api_server.py
 ```
 
 Default endpoints:
@@ -154,8 +151,9 @@ Default endpoints:
 - `POST /predict`
 - `POST /batch-predict`
 
-Use the request schema from `api_server.py` (`PredictRequest`) to set strategy,
-steps, families, and model preferences.
+Send `X-API-Key` on prediction requests. The API accepts bounded `var`, `auto`,
+and `ensemble` requests with compact, non-neural candidates. Benchmarking,
+meta/mix searches, LSTM, and PINN remain offline CLI workflows.
 
 ## QA and stability scoring
 
@@ -183,4 +181,3 @@ Suggested `.gitignore` entries (if not already present):
 - `.venv/`
 - `__pycache__/`
 - `*.pyc`
-

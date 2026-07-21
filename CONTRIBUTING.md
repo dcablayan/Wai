@@ -5,9 +5,7 @@
 ```bash
 git clone https://github.com/dcablayan/Wai.git
 cd Wai
-python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+uv sync --locked --all-extras
 ```
 
 ## Running the demo pipeline
@@ -31,7 +29,7 @@ make demo
 ```bash
 make test
 # or
-pytest tests/ -v
+uv run pytest tests/ -v
 ```
 
 The test suite covers data loading, validation, windowing, feature engineering,
@@ -47,7 +45,9 @@ or private data required.
 
 ## Code style
 
-- Python 3.10+ compatible
+- Python 3.13+ compatible; CI also runs Python 3.14
+- Run `uv run ruff check src scripts tests Hohonu-1 app.py` before review
+- Keep learned artifacts as validated JSON; do not introduce pickle/joblib loads
 - Type hints on public function signatures
 - No external ML frameworks in `src/models/prototypes.py` (stdlib + math only)
 - Docstrings on public classes and functions; one line is enough for obvious cases

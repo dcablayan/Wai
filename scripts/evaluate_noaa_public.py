@@ -40,7 +40,8 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.data.loader import load_noaa_data, load_noaa_predictions
+from src.data.noaa import NOAACoopsAdapter
+from src.data.schema import to_model_frame
 from src.models.baseline import HarmonicRidgeModel
 from src.models.gradient_boost import GradBoostModel
 from src.models.metrics import (
@@ -51,6 +52,53 @@ from src.models.metrics import (
     save_metrics,
     skill_score,
 )
+
+
+def load_noaa_data(
+    station_id: str,
+    begin_date: str,
+    end_date: str,
+    product: str = "water_level",
+    datum: str = "MLLW",
+    units: str = "metric",
+    time_zone: str = "gmt",
+) -> pd.DataFrame:
+    """Compatibility wrapper over the canonical NOAA adapter."""
+
+    if product != "water_level" or units != "metric" or time_zone != "gmt":
+        raise ValueError("NOAA evaluation requires metric GMT water_level data")
+    canonical = NOAACoopsAdapter().fetch_observations(
+        station_id,
+        begin_date,
+        end_date,
+        latitude=float("nan"),
+        longitude=float("nan"),
+        datum=datum,
+    )
+    return to_model_frame(canonical)
+
+
+def load_noaa_predictions(
+    station_id: str,
+    begin_date: str,
+    end_date: str,
+    datum: str = "MLLW",
+    units: str = "metric",
+    time_zone: str = "gmt",
+) -> pd.DataFrame:
+    """Compatibility wrapper over the canonical NOAA prediction adapter."""
+
+    if units != "metric" or time_zone != "gmt":
+        raise ValueError("NOAA evaluation requires metric GMT predictions")
+    canonical = NOAACoopsAdapter().fetch_tide_predictions(
+        station_id,
+        begin_date,
+        end_date,
+        latitude=float("nan"),
+        longitude=float("nan"),
+        datum=datum,
+    )
+    return to_model_frame(canonical)
 
 REPORTS_DIR = Path(__file__).resolve().parent.parent / "reports"
 TRAIN_FRAC = 0.75

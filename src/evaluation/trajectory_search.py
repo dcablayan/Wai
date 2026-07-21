@@ -61,7 +61,12 @@ def search_oracle_workflows(
     beam_width: int = 8,
     context: Any | None = None,
 ) -> list[OracleWorkflow]:
-    """Search bounded valid workflows using live Ultra state transitions."""
+    """Search bounded valid workflows using live Ultra state transitions.
+
+    Offline oracle generation is bounded by turns and beam width, not wall
+    time.  A live deadline would make labels depend on host speed and hash
+    iteration order, which is unacceptable for reproducible training data.
+    """
 
     specs = default_expert_specs()
     encoder = StateEncoder()
@@ -74,6 +79,7 @@ def search_oracle_workflows(
         budget=budget,
         started_monotonic=now,
         deadline_monotonic=now + budget.deadline_ms / 1000.0,
+        enforce_wall_clock_deadline=False,
     )
     beam = [root]
     completed: list[CoordinationState] = []
@@ -103,14 +109,36 @@ def search_oracle_workflows(
                     next_beam.append(child)
         if not next_beam:
             break
-        beam = sorted(next_beam, key=lambda state: _state_loss(state, actual_m, config))[:beam_width]
+        beam = sorted(
+            next_beam,
+            key=lambda state: _deterministic_state_key(state, actual_m, config),
+        )[:beam_width]
 
     completed.extend(beam)
     workflows = [_workflow_from_state(state, actual_m, config) for state in completed]
     if not workflows:
         workflows = [_unavailable_workflow(actual_m, config)]
-    workflows.sort(key=lambda item: item.terminal_loss)
+    workflows.sort(key=lambda item: (item.terminal_loss, item.workflow_id))
     return workflows[: max(1, keep_alternatives)]
+
+
+def _deterministic_state_key(
+    state: CoordinationState,
+    actual_m: float | None,
+    config: TerminalLossConfig | None,
+) -> tuple[float, tuple[tuple[str, str, str, str], ...]]:
+    """Stable beam ordering for equal-loss candidate workflows."""
+
+    actions = tuple(
+        (
+            action.role.value,
+            action.expert_id,
+            action.subtask_kind.value,
+            action.control_decision.value,
+        )
+        for action in state.action_transcript
+    )
+    return (_state_loss(state, actual_m, config), actions)
 
 
 def _simulate_action(
@@ -118,11 +146,10 @@ def _simulate_action(
     state: CoordinationState,
     expert_predictions: dict[str, dict[str, Any]],
 ) -> CoordinationMessage:
-    started = time.perf_counter()
     try:
         visible = state.visible_messages(action.access_list)
     except Exception as exc:
-        return _message(action, MessageStatus.FAILED, {"error": str(exc)}, started)
+        return _message(action, MessageStatus.FAILED, {"error": str(exc)})
     role_input = RoleInput(
         context=state.original_context,
         subtask_kind=action.subtask_kind,
@@ -138,22 +165,21 @@ def _simulate_action(
     )
     if action.role is Role.THINKER:
         result = _simulated_thinker_result(state.original_context, action)
-        return _message(action, MessageStatus.SUCCESS, result, started)
+        return _message(action, MessageStatus.SUCCESS, result)
     if action.role is Role.WORKER:
         if action.expert_id == "ensemble_synthesis":
             result = EnsembleSynthesisWorker().run(role_input)
-            return _message(action, _status_from_worker_result(result), result, started)
+            return _message(action, _status_from_worker_result(result), result)
         result = _worker_result_from_prediction(action.expert_id, expert_predictions)
-        return _message(action, _status_from_worker_result(result), result, started)
+        return _message(action, _status_from_worker_result(result), result)
     verifier = _verifier(action).verify(role_input)
-    return _message(action, MessageStatus.SUCCESS, {"verifier": verifier.to_dict()}, started)
+    return _message(action, MessageStatus.SUCCESS, {"verifier": verifier.to_dict()})
 
 
 def _message(
     action: CoordinationAction,
     status: MessageStatus,
     result: dict[str, Any],
-    started: float,
 ) -> CoordinationMessage:
     return CoordinationMessage(
         turn_id=action.turn_id,
@@ -163,7 +189,9 @@ def _message(
         visible_prior_turns=list(action.access_list),
         status=status,
         structured_result=result,
-        latency_ms=(time.perf_counter() - started) * 1000.0,
+        # Offline oracle loss uses deterministic modeled latency, never host
+        # runtime. This keeps labels stable while still penalizing cost.
+        latency_ms=float(default_expert_specs()[action.expert_id].typical_latency_ms),
         warnings=[],
     )
 

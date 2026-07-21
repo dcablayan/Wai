@@ -109,6 +109,32 @@ def test_oracle_search_considers_synthesis_and_peak_weighted_loss():
     )
 
 
+def test_oracle_search_is_independent_of_wall_clock(monkeypatch):
+    row = _replay().iloc[1]
+    predictions = json.loads(row["expert_predictions"])
+    monkeypatch.setattr("src.evaluation.trajectory_search.time.monotonic", lambda: 10.0)
+    monkeypatch.setattr("src.orchestration.coordination_state.time.monotonic", lambda: 10_000.0)
+    first = search_oracle_workflows(
+        expert_predictions=predictions,
+        actual_m=float(row["actual_m"]),
+        max_turns=7,
+        keep_alternatives=50,
+        beam_width=100,
+    )
+    monkeypatch.setattr("src.evaluation.trajectory_search.time.monotonic", lambda: 50_000.0)
+    monkeypatch.setattr("src.orchestration.coordination_state.time.monotonic", lambda: 1_000_000.0)
+    second = search_oracle_workflows(
+        expert_predictions=predictions,
+        actual_m=float(row["actual_m"]),
+        max_turns=7,
+        keep_alternatives=50,
+        beam_width=100,
+    )
+    assert [workflow.workflow_id for workflow in first] == [
+        workflow.workflow_id for workflow in second
+    ]
+
+
 def test_trajectory_dataset_excludes_future_labels_from_policy_state():
     dataset = build_coordination_trajectory_dataset(_replay(), max_turns=5)
     assert not dataset.empty
@@ -120,7 +146,7 @@ def test_trajectory_dataset_excludes_future_labels_from_policy_state():
 
 def test_coordinator_training_produces_shadow_artifact_and_report(tmp_path):
     dataset = build_coordination_trajectory_dataset(_replay(), max_turns=5)
-    artifact_path = tmp_path / "coordinator.pkl"
+    artifact_path = tmp_path / "coordinator.json"
     artifact, report = train_coordinator_from_trajectories(
         dataset,
         config=CoordinatorTrainingConfig(min_training_rows=4, epochs=10),
@@ -140,7 +166,7 @@ def test_coordinator_training_produces_shadow_artifact_and_report(tmp_path):
 
 def test_train_to_live_artifact_round_trip_runs_ultra_pipeline(tmp_path):
     dataset = build_coordination_trajectory_dataset(_replay(), max_turns=5)
-    artifact_path = tmp_path / "coordinator.pkl"
+    artifact_path = tmp_path / "coordinator.json"
     train_coordinator_from_trajectories(
         dataset,
         config=CoordinatorTrainingConfig(min_training_rows=4, epochs=20),
@@ -174,7 +200,7 @@ def test_forward_time_split_keeps_complete_origins_in_one_split(tmp_path):
     artifact, report = train_coordinator_from_trajectories(
         dataset,
         config=CoordinatorTrainingConfig(min_training_rows=4, epochs=5),
-        artifact_path=tmp_path / "coordinator.pkl",
+        artifact_path=tmp_path / "coordinator.json",
     )
     assert report.forward_time_split is True
     split = artifact["training_metadata"]["split"]

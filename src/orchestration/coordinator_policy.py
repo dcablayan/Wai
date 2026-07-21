@@ -9,6 +9,7 @@ from typing import Any
 
 import numpy as np
 
+from src.artifacts import load_json_artifact
 from src.orchestration.coordination_state import CoordinationState
 from src.orchestration.coordinator_head import ActionRegistry, CoordinationHead, action_key
 from src.orchestration.protocol import CoordinationAction
@@ -82,10 +83,7 @@ class LearnedCoordinatorPolicy(CoordinatorPolicy):
         min_validation_accuracy: float = 0.01,
         allow_shadow: bool = False,
     ) -> "LearnedCoordinatorPolicy":
-        import pickle
-
-        with open(path, "rb") as handle:
-            artifact = pickle.load(handle)
+        artifact = load_json_artifact(path, expected_kind="coordinator_policy")
         return cls.from_artifact(
             artifact,
             encoder=encoder,

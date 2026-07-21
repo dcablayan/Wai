@@ -60,7 +60,7 @@ This is useful for selecting model families that are not only accurate but also 
 ## Example
 
 ```bash
-python run_combo_benchmark.py NODE123 \
+uv run python run_combo_benchmark.py NODE123 \
   --mode all \
   --rolling-backtest \
   --rolling-folds 5 \
@@ -72,4 +72,3 @@ python run_combo_benchmark.py NODE123 \
 
 If rolling is invalid (not enough history, bad window config), the output includes
 an `error` field inside `rolling_backtest`.
-

@@ -27,6 +27,21 @@ CANONICAL_COLUMNS = [
     "qc_flags",
     "retrieved_at",
     "latency_seconds",
+    "wind_speed_mps",
+    "wind_direction_deg",
+    "wind_gust_mps",
+    "air_pressure_hpa",
+    "air_temperature_c",
+    "water_temperature_c",
+]
+
+WEATHER_VALUE_COLUMNS = [
+    "wind_speed_mps",
+    "wind_direction_deg",
+    "wind_gust_mps",
+    "air_pressure_hpa",
+    "air_temperature_c",
+    "water_temperature_c",
 ]
 
 ALLOWED_RECORD_TYPES = {
@@ -113,7 +128,7 @@ def canonicalize_frame(
     record_type: str,
     timestamp_col: str = "timestamp",
     station_id_col: str = "station_id",
-    water_level_col: str = "water_level",
+    water_level_col: str | None = "water_level",
     latitude_col: str = "lat",
     longitude_col: str = "lon",
     datum_col: str = "datum",
@@ -129,23 +144,20 @@ def canonicalize_frame(
     if record_type not in ALLOWED_RECORD_TYPES:
         raise CanonicalSchemaError(f"Unsupported record_type: {record_type!r}")
 
-    missing = [
-        c for c in (
-            timestamp_col,
-            station_id_col,
-            water_level_col,
-            latitude_col,
-            longitude_col,
-            datum_col,
-        )
-        if c not in frame.columns
-    ]
+    required = [timestamp_col, station_id_col, latitude_col, longitude_col, datum_col]
+    if water_level_col is not None:
+        required.append(water_level_col)
+    missing = [c for c in required if c not in frame.columns]
     if missing:
         raise CanonicalSchemaError(f"Missing required source columns: {missing}")
 
     df = frame.copy()
     retrieved = utc_timestamp(retrieved_at) if retrieved_at is not None else pd.Timestamp.now(tz="UTC")
     units_value = df[units_col] if units_col and units_col in df.columns else units
+    if water_level_col is None:
+        water_levels = pd.Series(np.nan, index=df.index, dtype="float64")
+    else:
+        water_levels = normalize_water_level_to_meters(df[water_level_col], units_value)
 
     out = pd.DataFrame({
         "timestamp_utc": normalize_timestamp_series(df[timestamp_col]),
@@ -153,7 +165,7 @@ def canonicalize_frame(
         "station_id": df[station_id_col].astype(str),
         "latitude": pd.to_numeric(df[latitude_col], errors="coerce"),
         "longitude": pd.to_numeric(df[longitude_col], errors="coerce"),
-        "water_level_m": normalize_water_level_to_meters(df[water_level_col], units_value),
+        "water_level_m": water_levels,
         "datum": df[datum_col].astype(str).str.upper(),
         "record_type": record_type,
         "retrieved_at": retrieved,
@@ -171,7 +183,14 @@ def canonicalize_frame(
 
     if extra_defaults:
         for key, value in extra_defaults.items():
+            if key not in WEATHER_VALUE_COLUMNS:
+                raise CanonicalSchemaError(f"Unsupported canonical extra column: {key!r}")
             out[key] = value
+
+    for column in WEATHER_VALUE_COLUMNS:
+        if column not in out:
+            out[column] = np.nan
+        out[column] = pd.to_numeric(out[column], errors="coerce")
 
     retrieved_series = pd.Series([retrieved] * len(out), index=out.index)
     out["latency_seconds"] = (
@@ -208,8 +227,18 @@ def validate_canonical_observations(frame: pd.DataFrame) -> pd.DataFrame:
     if invalid_types:
         raise CanonicalSchemaError(f"Invalid record_type values: {invalid_types}")
 
-    if pd.to_numeric(frame["water_level_m"], errors="coerce").isna().any():
+    water_level = pd.to_numeric(frame["water_level_m"], errors="coerce")
+    weather_rows = frame["record_type"].eq("weather_observation")
+    if water_level[~weather_rows].isna().any():
         raise CanonicalSchemaError("water_level_m contains non-numeric values")
+    if weather_rows.any():
+        weather_values = frame.loc[weather_rows, WEATHER_VALUE_COLUMNS].apply(
+            pd.to_numeric, errors="coerce"
+        )
+        if weather_values.notna().sum(axis=1).eq(0).any():
+            raise CanonicalSchemaError(
+                "weather observations require at least one numeric weather value"
+            )
 
     if frame["datum"].isna().any() or (frame["datum"].astype(str).str.strip() == "").any():
         raise CanonicalSchemaError("datum must be present for every record")
@@ -224,10 +253,10 @@ def assert_compatible_datums(
 ) -> str:
     """Return the single datum in use or raise when datums differ.
 
-    Wai intentionally does not perform vertical datum conversion yet.  Mixing
-    MLLW, MSL, NAVD88, or provider-specific datums without a verified
-    conversion would silently corrupt residual forecasts, so this check fails
-    closed.
+    Mixing MLLW, MSL, NAVD88, or provider-specific datums without a verified
+    station offset would silently corrupt residual forecasts, so this check
+    fails closed.  Use :mod:`src.data.datum` to apply reviewed offsets before
+    calling this compatibility check.
     """
 
     datums: set[str] = set()

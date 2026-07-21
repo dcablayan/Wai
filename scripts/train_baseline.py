@@ -32,7 +32,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import pickle
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -66,9 +65,10 @@ from sklearn.linear_model import Ridge
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
+from src.evidence import source_fingerprint
+
 TRAIN_FRAC = 0.75
 REPORTS_DIR = Path(__file__).resolve().parent.parent / "reports"
-MODELS_DIR  = Path(__file__).resolve().parent.parent / "reports" / "models"
 METRICS_PATH = REPORTS_DIR / "model_metrics.json"
 ABLATION_PATH = REPORTS_DIR / "ablation_metrics.json"
 META_PATH    = REPORTS_DIR / "run_metadata.json"
@@ -91,14 +91,6 @@ def _data_hash(df: pd.DataFrame) -> str:
     """MD5 hash of the data CSV bytes as a provenance fingerprint."""
     csv_bytes = df.to_csv(index=False).encode()
     return hashlib.md5(csv_bytes).hexdigest()[:16]
-
-
-def save_model_artifact(model, station_id: str, model_name: str) -> None:
-    """Pickle a fitted model to reports/models/{station_id}_{model_name}.pkl."""
-    MODELS_DIR.mkdir(parents=True, exist_ok=True)
-    path = MODELS_DIR / f"{station_id}_{model_name}.pkl"
-    with open(path, "wb") as f:
-        pickle.dump(model, f)
 
 
 def save_run_metadata(meta: dict) -> None:
@@ -213,8 +205,6 @@ def train_station(df_station, station_id: str = ""):
     # --- Harmonic Ridge ---
     harmonic = HarmonicRidgeModel(alpha=1.0).fit(train)
     harmonic_metrics = harmonic.evaluate(test)
-    if station_id:
-        save_model_artifact(harmonic, station_id, "harmonic_ridge")
 
     # --- WaveGRU ---
     wavegru = WaveGRUModel(lookback=24).fit(train)
@@ -223,8 +213,6 @@ def train_station(df_station, station_id: str = ""):
     # --- Gradient Boosting ---
     gradboost = GradBoostModel().fit(train)
     gradboost_metrics = gradboost.evaluate(test)
-    if station_id:
-        save_model_artifact(gradboost, station_id, "grad_boost")
 
     # Bootstrap 95% CI on MAE/RMSE for the primary supervised models.
     # Headline interval = moving/circular block bootstrap (handles
@@ -344,10 +332,13 @@ def main() -> None:
     meta = {
         "run_at": datetime.now(timezone.utc).isoformat(),
         "git_sha": _git_sha(),
+        "source_fingerprint": source_fingerprint(
+            Path(__file__).resolve().parent.parent
+        ),
         "data_hash": _data_hash(df),
         "train_frac": TRAIN_FRAC,
         "stations": sorted(df["station_id"].unique().tolist()),
-        "model_version": "0.1.0",
+        "model_version": "0.2.0",
     }
     save_run_metadata(meta)
     print(f"Run metadata saved to {META_PATH}")

@@ -1,0 +1,360 @@
+{
+  "artifact_kind": "learned_router",
+  "format": "wai.safe-json-artifact",
+  "payload": {
+    "artifact_type": "wai_learned_router",
+    "audit": {
+      "feature_columns_checked": [
+        "context__hohonu_freshness_seconds",
+        "context__hohonu_qc_status",
+        "context__horizon_minutes",
+        "context__noaa_freshness_seconds",
+        "context__noaa_qc_status",
+        "context__noaa_residual_trend_m_per_hour",
+        "context__recent_hohonu_trend_m_per_hour",
+        "context__recent_noaa_residual_m",
+        "context__tide_phase",
+        "missing__hohonu_qc_ok",
+        "missing__missing_latest_hohonu",
+        "missing__missing_latest_noaa",
+        "missing__missing_tide_prediction",
+        "missing__noaa_qc_ok"
+      ],
+      "n_rows": 21,
+      "n_violations": 0,
+      "required_columns_present": true,
+      "violations": []
+    },
+    "classes": [
+      "local_tide",
+      "noaa_residual"
+    ],
+    "config": {
+      "max_depth": 4,
+      "min_samples_leaf": 1,
+      "min_training_rows": 4,
+      "random_state": 42,
+      "test_fraction": 0.25
+    },
+    "feature_columns": [
+      "context__hohonu_freshness_seconds",
+      "context__horizon_minutes",
+      "context__noaa_freshness_seconds",
+      "context__noaa_residual_trend_m_per_hour",
+      "context__recent_hohonu_trend_m_per_hour",
+      "context__recent_noaa_residual_m",
+      "missing__hohonu_qc_ok",
+      "missing__missing_latest_hohonu",
+      "missing__missing_latest_noaa",
+      "missing__missing_tide_prediction",
+      "missing__noaa_qc_ok",
+      "context__hohonu_qc_status_pass",
+      "context__hohonu_qc_status_nan",
+      "context__noaa_qc_status_verified",
+      "context__noaa_qc_status_nan",
+      "context__tide_phase_falling",
+      "context__tide_phase_rising",
+      "context__tide_phase_nan"
+    ],
+    "model": {
+      "children_left": [
+        1,
+        2,
+        3,
+        -1,
+        -1,
+        -1,
+        7,
+        8,
+        9,
+        -1,
+        -1,
+        -1,
+        13,
+        -1,
+        -1
+      ],
+      "children_right": [
+        6,
+        5,
+        4,
+        -1,
+        -1,
+        -1,
+        12,
+        11,
+        10,
+        -1,
+        -1,
+        -1,
+        14,
+        -1,
+        -1
+      ],
+      "classes": [
+        "local_tide",
+        "noaa_residual"
+      ],
+      "feature": [
+        4,
+        4,
+        4,
+        -2,
+        -2,
+        -2,
+        4,
+        4,
+        4,
+        -2,
+        -2,
+        -2,
+        4,
+        -2,
+        -2
+      ],
+      "model_type": "decision_tree_classifier_v1",
+      "n_features_in": 18,
+      "threshold": [
+        -0.07982594519853592,
+        -0.11595313996076584,
+        -0.18047013133764267,
+        -2.0,
+        -2.0,
+        -2.0,
+        0.17692096531391144,
+        0.08006253838539124,
+        0.057479044422507286,
+        -2.0,
+        -2.0,
+        -2.0,
+        0.18198435753583908,
+        -2.0,
+        -2.0
+      ],
+      "value": [
+        [
+          [
+            0.6875,
+            0.3125
+          ]
+        ],
+        [
+          [
+            0.4,
+            0.6
+          ]
+        ],
+        [
+          [
+            0.6666666666666666,
+            0.3333333333333333
+          ]
+        ],
+        [
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        [
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        [
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        [
+          [
+            0.8181818181818182,
+            0.18181818181818182
+          ]
+        ],
+        [
+          [
+            0.8888888888888888,
+            0.1111111111111111
+          ]
+        ],
+        [
+          [
+            0.75,
+            0.25
+          ]
+        ],
+        [
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        [
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        [
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        [
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        [
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        [
+          [
+            1.0,
+            0.0
+          ]
+        ]
+      ]
+    },
+    "n_train": 16,
+    "training_metadata": [
+      {
+        "best_abs_error_m": 0.224672136104143,
+        "best_expert": "local_tide",
+        "forecast_origin_utc": "2024-01-02 00:00:00+00:00",
+        "target_time_utc": "2024-01-02 06:00:00+00:00"
+      },
+      {
+        "best_abs_error_m": 0.25694233082554296,
+        "best_expert": "local_tide",
+        "forecast_origin_utc": "2024-01-02 02:00:00+00:00",
+        "target_time_utc": "2024-01-02 08:00:00+00:00"
+      },
+      {
+        "best_abs_error_m": 0.15752585436069988,
+        "best_expert": "local_tide",
+        "forecast_origin_utc": "2024-01-02 04:00:00+00:00",
+        "target_time_utc": "2024-01-02 10:00:00+00:00"
+      },
+      {
+        "best_abs_error_m": 0.0297563871409397,
+        "best_expert": "local_tide",
+        "forecast_origin_utc": "2024-01-02 06:00:00+00:00",
+        "target_time_utc": "2024-01-02 12:00:00+00:00"
+      },
+      {
+        "best_abs_error_m": 0.005963360595444639,
+        "best_expert": "noaa_residual",
+        "forecast_origin_utc": "2024-01-02 08:00:00+00:00",
+        "target_time_utc": "2024-01-02 14:00:00+00:00"
+      },
+      {
+        "best_abs_error_m": 0.16297688048413816,
+        "best_expert": "noaa_residual",
+        "forecast_origin_utc": "2024-01-02 10:00:00+00:00",
+        "target_time_utc": "2024-01-02 16:00:00+00:00"
+      },
+      {
+        "best_abs_error_m": 0.16384938388468295,
+        "best_expert": "noaa_residual",
+        "forecast_origin_utc": "2024-01-02 12:00:00+00:00",
+        "target_time_utc": "2024-01-02 18:00:00+00:00"
+      },
+      {
+        "best_abs_error_m": 0.06593974222876967,
+        "best_expert": "noaa_residual",
+        "forecast_origin_utc": "2024-01-02 14:00:00+00:00",
+        "target_time_utc": "2024-01-02 20:00:00+00:00"
+      },
+      {
+        "best_abs_error_m": 0.025578967540085262,
+        "best_expert": "noaa_residual",
+        "forecast_origin_utc": "2024-01-02 16:00:00+00:00",
+        "target_time_utc": "2024-01-02 22:00:00+00:00"
+      },
+      {
+        "best_abs_error_m": 0.03756070239264092,
+        "best_expert": "local_tide",
+        "forecast_origin_utc": "2024-01-02 18:00:00+00:00",
+        "target_time_utc": "2024-01-03 00:00:00+00:00"
+      },
+      {
+        "best_abs_error_m": 0.13426153559193876,
+        "best_expert": "local_tide",
+        "forecast_origin_utc": "2024-01-02 20:00:00+00:00",
+        "target_time_utc": "2024-01-03 02:00:00+00:00"
+      },
+      {
+        "best_abs_error_m": 0.153077017092775,
+        "best_expert": "local_tide",
+        "forecast_origin_utc": "2024-01-02 22:00:00+00:00",
+        "target_time_utc": "2024-01-03 04:00:00+00:00"
+      },
+      {
+        "best_abs_error_m": 0.2091515053494779,
+        "best_expert": "local_tide",
+        "forecast_origin_utc": "2024-01-03 00:00:00+00:00",
+        "target_time_utc": "2024-01-03 06:00:00+00:00"
+      },
+      {
+        "best_abs_error_m": 0.2366078321397596,
+        "best_expert": "local_tide",
+        "forecast_origin_utc": "2024-01-03 02:00:00+00:00",
+        "target_time_utc": "2024-01-03 08:00:00+00:00"
+      },
+      {
+        "best_abs_error_m": 0.151477754847482,
+        "best_expert": "local_tide",
+        "forecast_origin_utc": "2024-01-03 04:00:00+00:00",
+        "target_time_utc": "2024-01-03 10:00:00+00:00"
+      },
+      {
+        "best_abs_error_m": 0.04367568823323148,
+        "best_expert": "local_tide",
+        "forecast_origin_utc": "2024-01-03 06:00:00+00:00",
+        "target_time_utc": "2024-01-03 12:00:00+00:00"
+      },
+      {
+        "best_abs_error_m": 0.014848891967042713,
+        "best_expert": "regional_to_local_residual",
+        "forecast_origin_utc": "2024-01-03 08:00:00+00:00",
+        "target_time_utc": "2024-01-03 14:00:00+00:00"
+      },
+      {
+        "best_abs_error_m": 0.1548206994746164,
+        "best_expert": "noaa_residual",
+        "forecast_origin_utc": "2024-01-03 10:00:00+00:00",
+        "target_time_utc": "2024-01-03 16:00:00+00:00"
+      },
+      {
+        "best_abs_error_m": 0.1760104043254072,
+        "best_expert": "noaa_residual",
+        "forecast_origin_utc": "2024-01-03 12:00:00+00:00",
+        "target_time_utc": "2024-01-03 18:00:00+00:00"
+      },
+      {
+        "best_abs_error_m": 0.08699507426833648,
+        "best_expert": "noaa_residual",
+        "forecast_origin_utc": "2024-01-03 14:00:00+00:00",
+        "target_time_utc": "2024-01-03 20:00:00+00:00"
+      },
+      {
+        "best_abs_error_m": 0.015406672344184136,
+        "best_expert": "noaa_residual",
+        "forecast_origin_utc": "2024-01-03 16:00:00+00:00",
+        "target_time_utc": "2024-01-03 22:00:00+00:00"
+      }
+    ],
+    "validation": "forward_time"
+  },
+  "payload_sha256": "32c825b135366d2116f22ecf18d3e8a7e68937ad4a048b1eee96783afed5bedb",
+  "version": 1
+}

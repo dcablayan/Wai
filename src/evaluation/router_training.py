@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import math
-import pickle
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -14,6 +13,7 @@ import pandas as pd
 from sklearn.metrics import accuracy_score
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
+from src.artifacts import encode_router_artifact, save_json_artifact
 from src.orchestration.learned_router import _feature_row
 
 
@@ -215,9 +215,11 @@ def train_router_from_replay(
     saved_model_path = None
     if model_path is not None:
         path = Path(model_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "wb") as handle:
-            pickle.dump(artifact, handle)
+        save_json_artifact(
+            path,
+            encode_router_artifact(artifact),
+            kind="learned_router",
+        )
         saved_model_path = str(path)
 
     report = RouterTrainingReport(

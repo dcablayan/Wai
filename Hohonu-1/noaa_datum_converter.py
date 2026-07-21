@@ -1,11 +1,12 @@
 # Authors: MengChen Chung <mengchenc@uchicago.edu>
 
+from __future__ import annotations
+
 '''
 Functions converting noaa time series data to different datums.
 '''
 
 # Third-party
-import numpy as np
 import pandas as pd
 from pathlib import Path
 
@@ -61,7 +62,9 @@ def _safe_station_scalar(noaa_id: int, datum_key: str):
     return scalar_value
 
 
-def noaa_stnd_to_navd88(noaa_id: 'string', begin: 'float', end: 'float', units: 'string' = 'metric')-> 'pandas.DataFrame':
+def noaa_stnd_to_navd88(
+    noaa_id: str, begin: float, end: float, units: str = "metric"
+) -> pd.DataFrame | None:
     
     '''
     This function convert noaa time series data from stnd to navd88
@@ -102,7 +105,9 @@ def noaa_stnd_to_navd88(noaa_id: 'string', begin: 'float', end: 'float', units: 
         return
 
 
-def noaa_stnd_to_mllw(noaa_id: 'string', begin: 'float', end: 'float', units: 'string' = 'metric')-> 'pandas.DataFrame':
+def noaa_stnd_to_mllw(
+    noaa_id: str, begin: float, end: float, units: str = "metric"
+) -> pd.DataFrame | None:
     
     '''
     This function convert noaa time series data from stnd to mllw

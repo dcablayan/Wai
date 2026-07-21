@@ -12,6 +12,7 @@ Putting together the pieces we've been working on winter-21 quarter.
 # Standard lib
 from datetime import datetime, timedelta
 from pathlib import Path
+import re
 from types import SimpleNamespace
 
 # Third-party
@@ -19,6 +20,21 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 import numpy as np
 import pandas as pd
+
+
+NODE_NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
+
+
+def validate_node_name(value: str) -> str:
+    """Return a safe local station identifier or fail before file lookup."""
+
+    node_name = str(value).strip()
+    if not NODE_NAME_PATTERN.fullmatch(node_name):
+        raise ValueError(
+            "node_name must be 1-64 characters using only letters, numbers, "
+            "dot, underscore, or hyphen"
+        )
+    return node_name
 
 # Locals
 try:
@@ -50,6 +66,7 @@ except ModuleNotFoundError:
 
         @staticmethod
         def preprocess_node_data(node_name, begin, end):
+            node_name = validate_node_name(node_name)
             candidates = [
                 Path("./data") / f"{node_name}.csv",
                 Path("./data") / f"{node_name}.tsv",
@@ -714,6 +731,7 @@ def run_pipeline(
     candidate_mix_max_size: int = 4,
 ):
     """Single entrypoint for generating a complete prediction for one node."""
+    node_name = validate_node_name(node_name)
     return fetch_predictions(
         node_name=node_name,
         model_strategy=model_strategy,

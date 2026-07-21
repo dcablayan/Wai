@@ -9,8 +9,8 @@ fixtures and require no network access.
 Reproduce:
 
 ```bash
-python -m pytest -q
-python -m scripts.benchmark_orchestration --iters 300 --replay-periods 2000
+uv run python -m pytest -q
+uv run python -m scripts.benchmark_orchestration --iters 300 --replay-periods 2000
 ```
 
 Artifacts: `reports/orchestration_baseline.json` (genuine pre-change snapshot),
@@ -182,7 +182,7 @@ Storm-surge fixture: peak-event MAE ≈ 0.41 m, escalation rate ≈ 0.18.
 ## 7. Test commands and results
 
 ```bash
-python -m pytest -q          # 292 passed
+uv run python -m pytest -q
 ```
 
 The new suites cover capability exclusion, primary selection, early stop,
@@ -200,7 +200,8 @@ protection, and `run(context)` backward compatibility.
 - The synthetic mock fixtures intentionally differ between the local and regional
   signals more than a faithful station pair would, so absolute MAE/coverage
   numbers are illustrative, not operational.
-- Datum conversion is still not implemented (fails closed on mismatch).
+- Datum conversion uses reviewed per-station offsets from `src.data.datum` and
+  still fails closed when an offset is missing or a mismatch is unresolved.
 - Residual transfer scale is static; the lag is applied from observed history but
   not learned. Weather-aware, spatial, and learned-local-residual experts remain
   placeholders.

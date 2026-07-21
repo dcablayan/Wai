@@ -25,7 +25,7 @@ onboarding paths, from a one-off CSV to a fully registered provider.
 Any delimited export works; map the column names on the command line:
 
 ```bash
-python -m scripts.run_gauge_forecast \
+uv run python -m scripts.run_gauge_forecast \
     --csv my_gauge.csv \
     --station-id MY-GAUGE-01 \
     --timestamp-col time --water-level-col level_ft \
@@ -36,7 +36,7 @@ python -m scripts.run_gauge_forecast \
 Add a reference station and tide predictions when available:
 
 ```bash
-python -m scripts.run_gauge_forecast \
+uv run python -m scripts.run_gauge_forecast \
     --csv my_gauge.csv --station-id MY-GAUGE-01 \
     --reference-csv noaa_water_level.csv --reference-station-id 1612340 \
     --tide-csv noaa_predictions.csv
@@ -72,7 +72,7 @@ Describe the station once in `data/stations.json`:
 Then:
 
 ```bash
-python -m scripts.run_gauge_forecast --catalog data/stations.json \
+uv run python -m scripts.run_gauge_forecast --catalog data/stations.json \
     --station-id MY-GAUGE-01
 ```
 

@@ -164,63 +164,71 @@ def predict_water_level(combined_data, steps=960, rmse_threshold=0.3):
     Output:
         -(np.arrary) prediction: 2D array with predicted values for all variables/columns
     """
-    if len(combined_data.index) < 7200:
-        print("No enough data for prediction. (Require at least one month data.)")
+    if steps <= 0:
+        raise ValueError("steps must be a positive integer")
+    minimum_rows = 7200 + int(steps)
+    if len(combined_data.index) < minimum_rows:
+        print(
+            "Not enough data for prediction. "
+            f"Require at least one month plus a {steps}-row validation holdout "
+            f"({minimum_rows} rows)."
+        )
         return
     elif len(combined_data.index) < 21600:
         warnings.warn("More than 3 months data are strongly suggested for prediction!")
-    # fit VAR model
+    # Select the training-window length on a true forward holdout.  The legacy
+    # implementation trained through the end of the series, forecast beyond
+    # it, and compared that forecast with rows from the beginning of the same
+    # training window.  That number was not an out-of-sample error estimate.
     lag = 248  # every 24 hrs and 50 mins the moon goes back to the same position, and creates the same tides
-    train_data = combined_data.iloc[-7200:]  # use 1 mon data for training
-    try:
-        model_fitted = VAR(train_data).fit(lag)
-    except ValueError:
-        print("ValueError! VAR model input cannot contain missing or infinite values.")
+    validation_start = len(combined_data) - int(steps)
+    validation_actual = combined_data.iloc[validation_start:].to_numpy(dtype=float)
+    max_extra_days = min(60, max(0, (validation_start - 7200) // 240))
+    candidate_days = range(0, max_extra_days + 1)
+    selected_window = None
+    selected_rmses = None
+    selected_score = float("inf")
+
+    for extra_days in candidate_days:
+        window = 7200 + 240 * extra_days
+        train_data = combined_data.iloc[validation_start - window : validation_start]
+        try:
+            model_fitted = VAR(train_data).fit(lag)
+            holdout_forecast = model_fitted.forecast(
+                y=train_data.values[-lag:], steps=steps
+            )
+        except (ValueError, np.linalg.LinAlgError):
+            continue
+
+        rmses = np.sqrt(
+            np.mean((holdout_forecast[:, :2] - validation_actual[:, :2]) ** 2, axis=0)
+        )
+        score = float(np.mean(rmses))
+        if score < selected_score:
+            selected_score = score
+            selected_window = window
+            selected_rmses = rmses
+        if np.all(rmses <= rmse_threshold):
+            break
+
+    if selected_window is None or selected_rmses is None:
+        print("Unable to fit a finite VAR model on any validation window.")
         return
-    fc = model_fitted.forecast(y=train_data.values[-lag:], steps=steps)
-    extra_days = 0
-    selected_RMSE_1 = (
-        np.mean((fc[:, 0] - combined_data.iloc[-(7200) : -(7200 - steps), 0]) ** 2)
-        ** 0.5
-    )
-    selected_RMSE_2 = (
-        np.mean((fc[:, 1] - combined_data.iloc[-(7200) : -(7200 - steps), 1]) ** 2)
-        ** 0.5
-    )
-    selected_fc = fc
-    if selected_RMSE_1 > rmse_threshold or selected_RMSE_2 > rmse_threshold:
-        # if the RMSEs did not meet the expectation, increase the training data to retrain the model by days
-        # but restrain the process to be within 60 days or the remaining data days, whichever is smaller
-        for i in range(1, min(61, 1 + (len(combined_data.index) - 7200) // 240)):
-            train_data = combined_data.iloc[-(7200 + 240 * i) :]
-            try:
-                model_fitted = VAR(train_data).fit(lag)
-            except ValueError:
-                print(
-                    "ValueError! VAR model input cannot contain missing or infinite values."
-                )
-                return
-            fc = model_fitted.forecast(y=train_data.values[-lag:], steps=steps)
-            RMSE_1 = (
-                np.mean(
-                    (fc[:, 0] - combined_data.iloc[-(7200) : -(7200 - steps), 0]) ** 2
-                )
-                ** 0.5
-            )
-            RMSE_2 = (
-                np.mean(
-                    (fc[:, 1] - combined_data.iloc[-(7200) : -(7200 - steps), 1]) ** 2
-                )
-                ** 0.5
-            )
-            if RMSE_1 < selected_RMSE_1 and RMSE_2 < selected_RMSE_2:
-                selected_RMSE_1 = RMSE_1
-                selected_RMSE_2 = RMSE_2
-                selected_fc = fc
-                extra_days = i
-            if selected_RMSE_1 < rmse_threshold and selected_RMSE_2 < rmse_threshold:
-                break
+
+    # Refit the selected configuration through the latest observation, then
+    # issue the actual future forecast requested by the caller.
+    final_train = combined_data.iloc[-selected_window:]
+    try:
+        final_model = VAR(final_train).fit(lag)
+        selected_fc = final_model.forecast(y=final_train.values[-lag:], steps=steps)
+    except (ValueError, np.linalg.LinAlgError):
+        print("Unable to refit the selected VAR model on all available data.")
+        return
+
+    extra_days = (selected_window - 7200) // 240
+    selected_RMSE_1 = float(selected_rmses[0])
+    selected_RMSE_2 = float(selected_rmses[1])
     print("extra days for model training:", extra_days)
-    print("estimated prediction RMSE in 1st column:", selected_RMSE_1)
-    print("estimated prediction RMSE in 2nd column:", selected_RMSE_2)
+    print("forward-holdout RMSE in 1st column:", selected_RMSE_1)
+    print("forward-holdout RMSE in 2nd column:", selected_RMSE_2)
     return selected_fc

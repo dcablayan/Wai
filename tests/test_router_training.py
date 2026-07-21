@@ -134,7 +134,7 @@ def test_train_router_from_generated_replay_and_load_artifact(tmp_path):
             step_minutes=240,
         ),
     )
-    model_path = tmp_path / "router.pkl"
+    model_path = tmp_path / "router.json"
     report_path = tmp_path / "router_report.json"
     _, report = train_router_from_replay(
         replay,

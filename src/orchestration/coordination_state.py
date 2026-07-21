@@ -28,6 +28,7 @@ class CoordinationState:
     budget: ExecutionBudget
     started_monotonic: float
     deadline_monotonic: float
+    enforce_wall_clock_deadline: bool = True
     full_message_transcript: list[CoordinationMessage] = field(default_factory=list)
     action_transcript: list[CoordinationAction] = field(default_factory=list)
     completed_workflow_graph: WorkflowGraph = field(default_factory=WorkflowGraph)
@@ -54,6 +55,8 @@ class CoordinationState:
 
     @property
     def remaining_deadline_ms(self) -> float:
+        if not self.enforce_wall_clock_deadline:
+            return float(self.budget.deadline_ms)
         return max(0.0, (self.deadline_monotonic - time.monotonic()) * 1000.0)
 
     @property

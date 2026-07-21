@@ -17,12 +17,13 @@ the live route — and falls back to the rule router when:
 
 from __future__ import annotations
 
-import pickle
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
+
+from src.artifacts import decode_router_artifact, load_json_artifact
 
 
 @dataclass(frozen=True)
@@ -57,9 +58,8 @@ class LearnedRouter:
 
     @classmethod
     def load(cls, path: str | Path) -> "LearnedRouter":
-        with open(path, "rb") as handle:
-            artifact = pickle.load(handle)
-        return cls(artifact)
+        payload = load_json_artifact(path, expected_kind="learned_router")
+        return cls(decode_router_artifact(payload))
 
     def predict_from_features(
         self,

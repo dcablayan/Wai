@@ -46,7 +46,7 @@ def _context():
 
 def test_learned_router_shadow_mode_records_without_controlling(tmp_path):
     replay = _replay(step=120)
-    model_path = tmp_path / "router.pkl"
+    model_path = tmp_path / "router.json"
     train_router_from_replay(replay, config=RouterTrainingConfig(min_training_rows=4), model_path=model_path)
     router = LearnedRouter.load(model_path)
 
@@ -65,7 +65,7 @@ def test_learned_router_shadow_mode_records_without_controlling(tmp_path):
 
 def test_shadow_recommendation_reports_source(tmp_path):
     replay = _replay(step=120)
-    model_path = tmp_path / "router.pkl"
+    model_path = tmp_path / "router.json"
     train_router_from_replay(replay, config=RouterTrainingConfig(min_training_rows=4), model_path=model_path)
     router = LearnedRouter.load(model_path)
     rec = router.shadow_recommend(_context())

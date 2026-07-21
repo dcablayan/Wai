@@ -7,7 +7,7 @@ This runbook summarizes what each top-level script does and the most common invo
 Primary one-node entrypoint.
 
 ```bash
-python hohonu_driver_script.py <node_id> [flags]
+uv run python hohonu_driver_script.py <node_id> [flags]
 ```
 
 Key arguments:
@@ -34,7 +34,7 @@ Notes:
 Benchmark + strategy sweep and optional rolling stability reporting.
 
 ```bash
-python run_combo_benchmark.py <node_id> [flags]
+uv run python run_combo_benchmark.py <node_id> [flags]
 ```
 
 Core modes:
@@ -68,7 +68,7 @@ Output sections:
 Runs multiple nodes repeatedly on schedule.
 
 ```bash
-python pipeline_scheduler.py <node_id_1> <node_id_2> ... [flags]
+uv run python pipeline_scheduler.py <node_id_1> <node_id_2> ... [flags]
 ```
 
 Common flags:
@@ -98,11 +98,12 @@ Endpoints:
 Starts with:
 
 ```bash
-python api_server.py
+WAI_API_KEY='replace-with-a-secret' uv run python Hohonu-1/api_server.py
 ```
 
-Then call with JSON `strategy`, `steps`, `include_lstm`, `include_pinn`,
-`candidate_profile`, and `candidate_model_families`.
+Send `X-API-Key` on prediction routes. HTTP requests are bounded to compact
+non-neural `var`, `auto`, and `ensemble` strategies; broad searches, `meta`,
+`mix`, LSTM, and PINN are offline-only.
 
 ## 5. Data utility helpers
 
@@ -111,7 +112,7 @@ Then call with JSON `strategy`, `steps`, `include_lstm`, `include_pinn`,
 Builds/refreshes Hohonu station metadata:
 
 ```bash
-python load_hohonu_devices.py
+uv run python load_hohonu_devices.py
 ```
 
 ### `noaa_datum_converter.py`

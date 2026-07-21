@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 
 import pandas as pd
@@ -80,6 +81,16 @@ class _SlowExpert(ForecastExpert):
             target_time_utc=context.target_time_utc, horizon_minutes=context.horizon_minutes,
             predicted_water_level_m=v, lower_m=v - 0.1, upper_m=v + 0.1, confidence=0.7,
         )
+
+
+class _BlockingExpert(_SlowExpert):
+    def __init__(self, name, release: threading.Event):
+        super().__init__(name=name, delay=0.0)
+        self._release = release
+
+    def forecast(self, context):
+        self._release.wait(timeout=1.0)
+        return super().forecast(context)
 
 
 # --------------------------------------------------------------------------- #
@@ -194,11 +205,33 @@ def test_fallback_call_is_reserved_when_all_experts_fail():
 
 def test_timeout_isolation_marks_expert_without_killing_batch():
     ctx = _context()
-    experts = [_SlowExpert("slow_a", delay=0.2), _FixedExpert("fast", 0.1)]
+    release = threading.Event()
+    experts = [_BlockingExpert("slow_a", release), _FixedExpert("fast", 0.1)]
+    started = time.perf_counter()
     runs = run_experts(experts, ctx, parallel=True, max_parallelism=2, per_expert_timeout_ms=50)
+    elapsed = time.perf_counter() - started
+    release.set()
     by_name = {r.name: r for r in runs}
     assert by_name["slow_a"].timed_out is True
     assert by_name["fast"].forecast is not None and by_name["fast"].forecast.ok
+    assert elapsed < 0.25
+
+
+def test_single_expert_timeout_returns_without_waiting_for_background_work():
+    ctx = _context()
+    release = threading.Event()
+    started = time.perf_counter()
+    runs = run_experts(
+        [_BlockingExpert("slow", release)],
+        ctx,
+        parallel=False,
+        per_expert_timeout_ms=50,
+    )
+    elapsed = time.perf_counter() - started
+    release.set()
+    assert runs[0].timed_out is True
+    assert runs[0].forecast is None
+    assert elapsed < 0.25
 
 
 def test_parallel_results_are_deterministically_ordered():

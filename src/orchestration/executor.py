@@ -69,24 +69,71 @@ def run_experts(
 
     if not experts:
         return []
-    if not parallel or len(experts) == 1:
+    if per_expert_timeout_ms is None and (not parallel or len(experts) == 1):
         return [run_expert(expert, context) for expert in experts]
 
-    timeout_s = (per_expert_timeout_ms / 1000.0) if per_expert_timeout_ms else None
+    timeout_s = (
+        max(0.0, per_expert_timeout_ms) / 1000.0
+        if per_expert_timeout_ms is not None
+        else None
+    )
+    if not parallel or len(experts) == 1:
+        return [
+            _run_expert_with_timeout(expert, context, timeout_s, per_expert_timeout_ms)
+            for expert in experts
+        ]
+
     workers = max(1, min(max_parallelism, len(experts)))
     results: list[ExpertRun | None] = [None] * len(experts)
-    with ThreadPoolExecutor(max_workers=workers) as pool:
+    pool = ThreadPoolExecutor(max_workers=workers)
+    started = time.perf_counter()
+    deadline = None if timeout_s is None else started + timeout_s
+    try:
         futures = {pool.submit(run_expert, expert, context): i for i, expert in enumerate(experts)}
         for future, i in futures.items():
             try:
-                results[i] = future.result(timeout=timeout_s)
+                remaining = None if deadline is None else max(0.0, deadline - time.perf_counter())
+                results[i] = future.result(timeout=remaining)
             except FutureTimeout:
                 future.cancel()
-                results[i] = ExpertRun(
-                    name=experts[i].model_name,
-                    forecast=None,
-                    latency_ms=per_expert_timeout_ms or 0.0,
-                    timed_out=True,
-                    error="expert timed out",
-                )
+                results[i] = _timeout_result(experts[i], started)
+    finally:
+        # A Python thread cannot be forcefully killed. With a timeout configured,
+        # abandon unfinished work without blocking the caller during shutdown.
+        pool.shutdown(wait=timeout_s is None, cancel_futures=timeout_s is not None)
     return [r for r in results if r is not None]
+
+
+def _run_expert_with_timeout(
+    expert: ForecastExpert,
+    context,
+    timeout_s: float | None,
+    timeout_ms: float | None,
+) -> ExpertRun:
+    """Run one expert with the same real timeout contract as a parallel batch."""
+
+    pool = ThreadPoolExecutor(max_workers=1)
+    started = time.perf_counter()
+    future = pool.submit(run_expert, expert, context)
+    try:
+        return future.result(timeout=timeout_s)
+    except FutureTimeout:
+        future.cancel()
+        return _timeout_result(expert, started, timeout_ms)
+    finally:
+        pool.shutdown(wait=timeout_s is None, cancel_futures=timeout_s is not None)
+
+
+def _timeout_result(
+    expert: ForecastExpert,
+    started: float,
+    timeout_ms: float | None = None,
+) -> ExpertRun:
+    elapsed_ms = (time.perf_counter() - started) * 1000.0
+    return ExpertRun(
+        name=expert.model_name,
+        forecast=None,
+        latency_ms=max(elapsed_ms, timeout_ms or 0.0),
+        timed_out=True,
+        error="expert timed out",
+    )

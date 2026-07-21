@@ -46,10 +46,10 @@
     "noaa_residual": 9,
     "regional_to_local_residual": 1
   },
-  "model_path": "reports/router_model.pkl",
+  "model_path": "reports/router_model.json",
   "n_rows": 21,
-  "n_test": 6,
-  "n_train": 15,
-  "test_accuracy": 0.16666666666666666,
-  "train_accuracy": 0.8666666666666667
+  "n_test": 5,
+  "n_train": 16,
+  "test_accuracy": 0.0,
+  "train_accuracy": 1.0
 }

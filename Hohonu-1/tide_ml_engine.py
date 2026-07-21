@@ -205,6 +205,7 @@ def _qa_score_from_metrics(
         return _metric_or_nan(value)
 
     def add_lower(name, weight_key):
+        nonlocal score_parts
         value = read_metric(name)
         weight = metric_weights.get(weight_key, 0.0)
         if not np.isfinite(value) or weight <= 0:
@@ -213,6 +214,7 @@ def _qa_score_from_metrics(
         nonlocal_total_weight(weight)
 
     def add_higher(name, weight_key):
+        nonlocal score_parts
         value = read_metric(name)
         weight = metric_weights.get(weight_key, 0.0)
         if not np.isfinite(value) or weight <= 0:
@@ -2687,7 +2689,7 @@ def benchmark_best_model_rolling(
 
     # Infer holdout length from desired window.
     step_seconds = float(_infer_step_delta(data.index).total_seconds())
-    rows_per_day = int(max(1, np.ceil(24 * 60 * 60 / max(step_seconds, 60.0)))
+    rows_per_day = int(max(1, np.ceil(24 * 60 * 60 / max(step_seconds, 60.0))))
     if str(backtest_window).lower() == "month":
         default_steps = 30 * rows_per_day
     elif str(backtest_window).lower() == "quarter":

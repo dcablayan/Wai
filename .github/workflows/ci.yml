@@ -6,74 +6,81 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.13", "3.14"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Install uv and Python ${{ matrix.python-version }}
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
+          version: "0.11.30"
           python-version: ${{ matrix.python-version }}
+          enable-cache: true
 
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('requirements.txt') }}
-          restore-keys: ${{ runner.os }}-pip-${{ matrix.python-version }}-
+      - name: Install locked dependencies
+        run: uv sync --locked --all-extras
 
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest-cov
+      - name: Compile every Python surface
+        run: uv run python -m compileall -q src scripts tests Hohonu-1 app.py
 
-      - name: Generate demo data
-        run: python -m scripts.prepare_demo_data
+      - name: Build wheel and source distribution
+        run: uv build
 
-      - name: Train baseline models (+ ablation + artifacts)
-        run: python -m scripts.train_baseline
+      - name: Lint correctness rules
+        run: uv run ruff check src scripts tests Hohonu-1 app.py
 
-      - name: Multi-horizon evaluation
-        run: python -m scripts.evaluate_horizons
+      - name: Type-check security and provenance boundaries
+        run: uv run mypy src/artifacts.py src/evidence.py scripts/check_report_freshness.py
 
-      - name: Event-holdout evaluation (episode metrics)
-        run: python -m scripts.evaluate_events
+      - name: Verify checked-in evidence freshness
+        run: uv run python -m scripts.check_report_freshness
 
-      - name: Rolling-origin evaluation
-        run: python -m scripts.evaluate_rolling_origin
-
-      - name: Conformal coverage evaluation
-        run: python -m scripts.evaluate_conformal
-
-      - name: Prototype benchmark (tidecast data)
-        run: python -m scripts.run_benchmark
-
-      - name: Generate HTML reports
-        run: python -m scripts.generate_report
-
-      - name: NOAA public evaluation (offline mode — no network calls)
+      - name: Generate complete offline demo evidence
         env:
           NOAA_OFFLINE: "1"
-        run: python -m scripts.evaluate_noaa_public
+        run: make demo
 
-      - name: Build reports/summary.json (single rollup)
-        run: python -m scripts.build_summary
+      - name: Re-verify generated evidence freshness
+        run: uv run python -m scripts.check_report_freshness
 
       - name: Dashboard import smoke test
-        run: python -c "import app; print('app.py imports OK')"
+        run: uv run python -c "import app; print('app.py imports OK')"
 
-      - name: Run tests with coverage
-        run: pytest tests/ -v --tb=short --cov=src --cov=scripts --cov-report=term-missing --cov-fail-under=70
+      - name: Run tests with branch coverage
+        run: >-
+          uv run pytest tests/ -v --tb=short
+          --cov=src --cov=scripts
+          --cov-branch --cov-report=term-missing --cov-report=json:/tmp/wai-core-coverage.json
+          --cov-fail-under=70
+
+      - name: Measure legacy service and evaluation coverage
+        run: >-
+          uv run pytest tests/test_api_security.py tests/test_legacy_stack.py -v --tb=short
+          --cov=Hohonu-1 --cov-branch --cov-report=term-missing
+          --cov-report=json:/tmp/wai-legacy-coverage.json --cov-fail-under=0
+
+      - name: Enforce critical-module coverage floors
+        run: >-
+          uv run python -m scripts.check_critical_coverage
+          /tmp/wai-core-coverage.json /tmp/wai-legacy-coverage.json
+
+      - name: Audit locked runtime dependencies
+        run: |
+          uv export --locked --no-dev --no-emit-project --extra api --output-file /tmp/wai-runtime.txt
+          uv run pip-audit --requirement /tmp/wai-runtime.txt
 
       - name: Upload reports as artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: wai-reports-py${{ matrix.python-version }}

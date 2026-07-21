@@ -21,7 +21,8 @@ I built a reproducible research demo with separated evidence tracks:
 - A forcing-ready feature contract for future wind, pressure, rainfall, and
   wave covariates, with tests that keep NOAA prediction baselines out of the
   generic model feature matrix.
-- A Streamlit dashboard for inspecting forecasts, uncertainty, alerts, and
+- A Streamlit control panel for inspecting held-out estimates, observed error,
+  uncertainty coverage, model rankings, horizon accuracy, alerts, and
   benchmark tables.
 - Generated research figures and summary docs for portfolio review.
 

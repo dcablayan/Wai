@@ -1,11 +1,12 @@
 {
-  "run_at": "2026-06-22T21:21:47.725945+00:00",
-  "git_sha": "630cc8f8a190",
+  "run_at": "2026-07-21T13:19:30.599390+00:00",
+  "git_sha": "7b10b72c7505",
+  "source_fingerprint": "8d239ca07f5030ce5aebe221892c04cd2910290b08c8f5c66fc08841ee1e9010",
   "data_hash": "5959e1d2e7ee06b6",
   "train_frac": 0.75,
   "stations": [
     "DEMO-HNL",
     "DEMO-SFO"
   ],
-  "model_version": "0.1.0"
+  "model_version": "0.2.0"
 }

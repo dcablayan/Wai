@@ -14,10 +14,38 @@ import numpy as np
 import pandas as pd
 import requests
 
-from src.data.canonicalize import canonicalize_frame
+from src.data.canonicalize import CanonicalSchemaError, canonicalize_frame
 from src.data.loader import NOAA_API_URL
 
 LOGGER = logging.getLogger(__name__)
+
+SUPPORTED_WEATHER_PRODUCTS = {
+    "air_pressure",
+    "air_temperature",
+    "water_temperature",
+    "wind",
+}
+
+
+def _weather_values(product: str, record: dict) -> dict[str, object]:
+    """Map NOAA product-specific fields into canonical metric weather fields."""
+
+    product = str(product).strip().lower()
+    if product == "wind":
+        return {
+            "wind_speed_mps": record.get("s"),
+            "wind_direction_deg": record.get("d"),
+            "wind_gust_mps": record.get("g"),
+        }
+    value = record.get("v", record.get("value"))
+    target = {
+        "air_pressure": "air_pressure_hpa",
+        "air_temperature": "air_temperature_c",
+        "water_temperature": "water_temperature_c",
+    }.get(product)
+    if target is None:
+        raise CanonicalSchemaError(f"Unsupported NOAA weather product: {product!r}")
+    return {target: value}
 
 
 @dataclass(frozen=True)
@@ -91,6 +119,32 @@ class NOAACoopsAdapter:
             use_cache=use_cache,
         )
 
+    def fetch_operational_forecast(
+        self,
+        station_id: str,
+        begin: object,
+        end: object,
+        *,
+        latitude: float,
+        longitude: float,
+        datum: str = "MLLW",
+        use_cache: bool = True,
+    ) -> pd.DataFrame:
+        """Fetch NOAA OFS water-level guidance when supported by a station."""
+
+        return self._fetch_product(
+            station_id,
+            begin,
+            end,
+            product="ofs_water_level",
+            record_type="forecast_guidance",
+            latitude=latitude,
+            longitude=longitude,
+            datum=datum,
+            source="NOAA_OFS_WATER_LEVEL",
+            use_cache=use_cache,
+        )
+
     def fetch_weather_observations(
         self,
         station_id: str,
@@ -103,14 +157,14 @@ class NOAACoopsAdapter:
         datum: str = "METEOROLOGICAL",
         use_cache: bool = True,
     ) -> pd.DataFrame:
-        """Fetch a NOAA weather-like product as canonical weather observations.
+        """Fetch a supported NOAA product as canonical weather observations."""
 
-        NOAA CO-OPS exposes products such as ``air_pressure`` and ``wind`` for
-        stations that support them.  The canonical ``water_level_m`` field is
-        still populated because the schema is currently water-level centric;
-        downstream weather-aware experts should read provider-specific weather
-        fields when those are added.
-        """
+        product = str(product).strip().lower()
+        if product not in SUPPORTED_WEATHER_PRODUCTS:
+            raise ValueError(
+                f"Unsupported NOAA weather product {product!r}; expected one of "
+                f"{sorted(SUPPORTED_WEATHER_PRODUCTS)}"
+            )
 
         return self._fetch_product(
             station_id,
@@ -144,24 +198,62 @@ class NOAACoopsAdapter:
         rows = []
         meta = payload.get("metadata", {})
         for record in records:
-            rows.append({
+            row = {
                 "timestamp": record.get("t") or record.get("timestamp"),
                 "station_id": station_id,
-                "water_level": record.get("v", record.get("value", record.get("water_level"))),
                 "units": "m",
                 "lat": meta.get("lat", latitude),
                 "lon": meta.get("lon", longitude),
                 "datum": meta.get("datum", datum),
                 "qc_status": record.get("q", record.get("qc_status", "unknown")),
                 "qc_flags": record.get("f", record.get("qc_flags", [])),
-            })
+            }
+            if record_type == "weather_observation":
+                row.update(_weather_values(product, record))
+            else:
+                row["water_level"] = record.get(
+                    "v", record.get("value", record.get("water_level"))
+                )
+            rows.append(row)
+        source_frame = pd.DataFrame(rows)
+        weather_defaults = None
+        water_level_col = "water_level"
+        if record_type == "weather_observation":
+            water_level_col = None
+            weather_defaults = {
+                column: source_frame[column]
+                for column in (
+                    "wind_speed_mps",
+                    "wind_direction_deg",
+                    "wind_gust_mps",
+                    "air_pressure_hpa",
+                    "air_temperature_c",
+                    "water_temperature_c",
+                )
+                if column in source_frame
+            }
+        else:
+            # NOAA uses blank/non-numeric values for individual missing samples.
+            # Drop those provider sentinels while retaining valid points instead
+            # of rejecting an otherwise useful station window.
+            source_frame["water_level"] = pd.to_numeric(
+                source_frame["water_level"], errors="coerce"
+            )
+            source_frame = source_frame.dropna(subset=["water_level"])
+            if source_frame.empty:
+                raise ValueError(
+                    f"NOAA payload returned no numeric {product} values for "
+                    f"station {station_id}"
+                )
         return canonicalize_frame(
-            pd.DataFrame(rows),
+            source_frame,
             source=source,
             record_type=record_type,
+            water_level_col=water_level_col,
             qc_status_col="qc_status",
             qc_flags_col="qc_flags",
             retrieved_at=retrieved_at,
+            extra_defaults=weather_defaults,
         )
 
     def _fetch_product(
@@ -211,7 +303,6 @@ class NOAACoopsAdapter:
                 source=source,
             ))
         return pd.concat(frames, ignore_index=True).sort_values("timestamp_utc").reset_index(drop=True)
-
     def _request_json(self, params: dict) -> dict:
         last_error: Exception | None = None
         for attempt in range(1, self.config.max_retries + 1):

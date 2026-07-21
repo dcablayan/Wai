@@ -156,19 +156,19 @@ Mini diagnostics also include cascade trace timing, cache hits, early-stop/escal
 Run the existing model benchmark:
 
 ```bash
-python -m scripts.run_benchmark
+uv run python -m scripts.run_benchmark
 ```
 
 Run the upstream orchestration benchmark:
 
 ```bash
-python -m scripts.benchmark_orchestration
+uv run python -m scripts.benchmark_orchestration
 ```
 
 Run the local Ultra smoke benchmark:
 
 ```bash
-python -m scripts.run_ultra_benchmark
+uv run python -m scripts.run_ultra_benchmark
 ```
 
 The Ultra smoke benchmark writes `reports/ultra_benchmark_results.md` and `.json`. It uses bundled mock data and is useful for checking orchestration and compute reporting; it is not real-world validation. Full ablations require a historical trajectory dataset and should compare no-thinker, no-verifier, no-transcript, no-access-control, no-recursive-replanning, fixed-topology, no-randomized-pool-training, Mini, Ultra bootstrap, Ultra learned, and oracle workflow upper bound.
@@ -176,7 +176,8 @@ The Ultra smoke benchmark writes `reports/ultra_benchmark_results.md` and `.json
 ## Current Limitations
 
 - Live Hohonu endpoint details may need project-specific URL and payload mapping.
-- Datum conversion is not implemented; mismatches fail closed.
+- Datum conversion is supported only through reviewed, per-station offsets in
+  `src.data.datum`; unknown conversions and unresolved mismatches fail closed.
 - Weather-aware, spatial, and learned local residual experts are placeholders.
 - Residual transfer scale and lag are static station-pair metadata.
 - The checked-in learned router is still a single-label advisory model and is not validated for live Ultra control.

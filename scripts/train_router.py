@@ -22,7 +22,7 @@ def main(argv: list[str] | None = None) -> int:
         description="Train Wai's advisory learned router from historical replay rows."
     )
     parser.add_argument("--replay", default="reports/routing_replay_mock.csv")
-    parser.add_argument("--model-output", default="reports/router_model.pkl")
+    parser.add_argument("--model-output", default="reports/router_model.json")
     parser.add_argument("--report-output", default="reports/router_training_report.json")
     parser.add_argument("--max-depth", type=int, default=4)
     parser.add_argument("--min-samples-leaf", type=int, default=1)

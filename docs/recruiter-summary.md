@@ -16,8 +16,9 @@
 - Verified strongest result: HarmonicRidge reduced average synthetic MAE
   versus rolling persistence at all evaluated horizons, including 0.0280 m vs
   0.5329 m at 6 h and 0.0297 m vs 0.4050 m at 12 h.
-- Designed a Streamlit dashboard for forecast overlays, model comparison,
-  high-water alerts, conformal coverage, and prototype benchmark review.
+- Designed a Streamlit control panel for current held-out estimates, observed
+  outcomes, uncertainty, rolling error, model ranking, horizon accuracy,
+  high-water alerts, and prototype benchmark review.
 
 ## Screenshot Recommendations
 
@@ -30,6 +31,7 @@ Use captions that state the evidence track.
 | `docs/images/baseline_comparison.svg` | 1-step synthetic baseline comparison across persistence and lightweight models |
 | `docs/images/residual_plot.svg` | HarmonicRidge residuals on synthetic holdout, including remaining error structure |
 | `reports/scientific_evidence_audit.md` | Claim-boundary report showing live NOAA status and meteorological forcing caveats |
+| Dashboard Control Center tab | Estimate console pairing every headline estimate with observed error, empirical interval coverage, and freshness state |
 | Dashboard Forecasts tab | Local Streamlit view of synthetic 1-step forecasts and conformal interval |
 | Dashboard Model Comparison tab | Metrics table showing baseline, HarmonicRidge, GradBoost, and horizon results |
 | Dashboard Uncertainty tab | Split-conformal coverage, including event and non-event coverage caveats |

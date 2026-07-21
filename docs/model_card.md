@@ -8,7 +8,7 @@
 
 | Field | Value |
 | --- | --- |
-| Version | 0.1.0 |
+| Version | 2.0.0 |
 | Task | Short-term station-level water-level regression |
 | Hybrid definition | Physics-informed tidal structure plus statistical/ML residual learning |
 | Main inputs | UTC timestamps, tidal harmonics, lagged observations, rolling statistics, optional external forcing covariates, optional NOAA tidal prediction baseline |

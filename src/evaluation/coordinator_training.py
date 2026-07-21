@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pickle
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -10,6 +9,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from src.artifacts import save_json_artifact
 from src.evaluation.coordination_trajectories import (
     audit_trajectory_dataset_for_leakage,
     trajectory_data_hash,
@@ -137,9 +137,7 @@ def train_coordinator_from_trajectories(
     saved = None
     if artifact_path is not None:
         path = Path(artifact_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "wb") as handle:
-            pickle.dump(artifact, handle)
+        save_json_artifact(path, artifact, kind="coordinator_policy")
         saved = str(path)
 
     report = CoordinatorTrainingReport(

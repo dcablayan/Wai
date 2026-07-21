@@ -3,8 +3,8 @@
 ## 1) Core pipeline entrypoint
 
 ```bash
-cd /Users/dylancablayan/Hohonu-1
-python hohonu_driver_script.py <node_id> --strategy mix --candidate-profile auto --model-families ridge rf lstm pinn --metadata
+cd /path/to/Wai/Hohonu-1
+uv run python hohonu_driver_script.py <node_id> --strategy mix --candidate-profile auto --model-families ridge rf lstm pinn --metadata
 ```
 
 ### Strategy options
@@ -17,7 +17,7 @@ python hohonu_driver_script.py <node_id> --strategy mix --candidate-profile auto
 ### Mix example
 
 ```bash
-python hohonu_driver_script.py <node_id> \
+uv run python hohonu_driver_script.py <node_id> \
   --strategy mix \
   --candidate-profile broad \
   --model-families ridge rf gbr lstm pinn \
@@ -30,7 +30,7 @@ python hohonu_driver_script.py <node_id> \
 ## 2) Combo benchmark sweep
 
 ```bash
-python run_combo_benchmark.py <node_id> \
+uv run python run_combo_benchmark.py <node_id> \
   --mode all \
   --candidate-profile broad \
   --model-families ridge lasso elastic knn svr hgb mlp rf gbr extra \
@@ -45,7 +45,7 @@ This prints benchmark, single-best, meta, ensemble, and mix outputs.
 ### Rolling backtest + family health
 
 ```bash
-python run_combo_benchmark.py <node_id> \
+uv run python run_combo_benchmark.py <node_id> \
   --mode all \
   --rolling-backtest \
   --rolling-folds 6 \
@@ -60,7 +60,7 @@ This returns the rolling fold rows and family-level health summaries under `roll
 ## 3) Interval scheduler for deployment-style runs
 
 ```bash
-python pipeline_scheduler.py <node_id_1> <node_id_2> \
+uv run python pipeline_scheduler.py <node_id_1> <node_id_2> \
   --strategy mix \
   --candidate-profile auto \
   --model-families ridge rf gbr hgb \
@@ -86,16 +86,16 @@ python pipeline_scheduler.py <node_id_1> <node_id_2> \
 
 ## 4) API service (FastAPI)
 
-1. Install API deps:
+1. Install the locked API environment from the repository root:
 
 ```bash
-pip install fastapi uvicorn
+uv sync --locked --all-extras
 ```
 
-2. Start server:
+2. Configure an API key and start the loopback-only server:
 
 ```bash
-python api_server.py
+WAI_API_KEY='replace-with-a-secret' uv run python Hohonu-1/api_server.py
 ```
 
 3. Health check:
@@ -109,14 +109,12 @@ curl http://127.0.0.1:8000/health
 ```bash
 curl -X POST http://127.0.0.1:8000/predict \
   -H 'Content-Type: application/json' \
+  -H 'X-API-Key: replace-with-a-secret' \
   -d '{
     "node_name": "<node_id>",
-    "strategy": "mix",
-    "candidate_profile": "auto",
-    "candidate_model_families": ["ridge","rf","lstm","pinn"],
-    "include_lstm": true,
-    "include_pinn": true,
-    "candidate_mix_max_size": 4
+    "strategy": "auto",
+    "candidate_profile": "compact",
+    "candidate_model_families": ["ridge","rf"]
   }'
 ```
 
@@ -125,6 +123,7 @@ curl -X POST http://127.0.0.1:8000/predict \
 ```bash
 curl -X POST http://127.0.0.1:8000/batch-predict \
   -H 'Content-Type: application/json' \
+  -H 'X-API-Key: replace-with-a-secret' \
   -d '{
     "node_names": ["<node_id_1>","<node_id_2>"],
     "strategy": "ensemble",
@@ -133,3 +132,9 @@ curl -X POST http://127.0.0.1:8000/batch-predict \
     "ensemble_size": 3
   }'
 ```
+
+HTTP requests are restricted to bounded `var`, `auto`, and `ensemble`
+inference with compact non-neural candidates, at most four nodes per batch,
+and at most 1,440 forecast steps. LSTM/PINN and broad benchmark searches are
+offline-only. Set `WAI_API_HOST=0.0.0.0` only behind TLS, authentication, and
+an external rate limiter.

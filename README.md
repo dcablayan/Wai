@@ -1,244 +1,185 @@
-# Wai - Hybrid Water-Level Prediction Research Demo
+# Wai
 
-> **Research demo, not an operational forecast system.**
-> Wai is a lightweight, reproducible project for testing whether
-> physics-informed tidal structure plus statistical/ML residual modeling can
-> improve short-term water-level forecasts over serious baselines. Current
-> synthetic results are sanity checks, not operational evidence.
+Wai is a research dashboard for exploring coastal water levels. It brings
+public NOAA data, model estimates, uncertainty, and tide movement into one
+control panel that is easier to inspect and compare.
+
+> **Wai is a research tool, not an emergency or navigation system.** Do not use
+> it for flood warnings, evacuation decisions, vessel operations, insurance,
+> or infrastructure safety.
 
 ![CI](https://github.com/dcablayan/Wai/actions/workflows/ci.yml/badge.svg)
-![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![Python](https://img.shields.io/badge/python-3.13%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-## Thesis
+## What you can do
 
-In this repo, **hybrid** means:
+- Browse active NOAA CO-OPS water-level stations across the United States.
+- Compare measured water levels with NOAA astronomical tide predictions.
+- View available NOAA Operational Forecast System guidance on the same UTC
+  timeline.
+- Follow an animated shoreline cross-section as the selected time changes.
+- Replay held-out model estimates with uncertainty, error, and baseline
+  comparisons.
+- Connect a CSV export or another tide-gauge provider to the same pipeline.
 
-1. Use known tidal physics as structure: NOAA tidal predictions and/or
-   harmonic sin/cos features for astronomical constituents.
-2. Learn the remaining residual statistically: Ridge, gradient boosting, or
-   simple residual persistence.
-3. Compare against baselines that are hard to beat: rolling persistence and
-   NOAA tidal prediction.
+Version 2 adds nationwide station discovery, live NOAA data layers, a clearer
+dashboard, beginner onboarding, and stronger evidence and artifact checks.
+The full change list is in [CHANGELOG.md](CHANGELOG.md).
 
-Wai does **not** claim real-time forecasting, emergency alerting, validated
-storm-surge modeling, or deep neural modeling. No PyTorch/TensorFlow dependency
-is used or needed.
+## Start in a few minutes
 
-## Evidence Tracks
-
-The project keeps evidence sources separate so mock and synthetic metrics are
-not presented as real NOAA performance.
-
-| Track | Data | Purpose | Main outputs |
-| --- | --- | --- | --- |
-| Synthetic sanity checks | `data/demo/demo_water_levels.csv` | Reproducible leakage, metrics, uncertainty, and event tests | `reports/model_metrics.json`, `reports/horizon_metrics.json`, `reports/event_metrics.json`, `reports/rolling_origin_metrics.json`, `reports/conformal_metrics.json`, `reports/ablation_metrics.json` |
-| Tidecast prototype benchmark | `data/demo/tidecast/*.csv` NOAA-derived tidal predictions | Compare lightweight prototypes and persistence on a smooth tidal signal | `reports/benchmark_results.md` |
-| NOAA mock evaluation | Synthetic fixtures shaped like NOAA API output | CI/offline check of NOAA evaluation code | `reports/noaa_mock_metrics.json`, `.md` |
-| NOAA live evaluation | Public NOAA CO-OPS observations merged to NOAA predictions | Real-data baseline comparison when network access is available | `reports/noaa_live_metrics.json`, `.md` |
-| Scientific evidence audit | Current checked-in reports | Machine-readable guardrail for live NOAA, mock, and forcing claims | `reports/scientific_evidence_audit.json`, `.md` |
-
-`reports/summary.json` indexes these as `synthetic`, `tidecast`,
-`noaa_mock`, and `noaa_live`.
-
-## Research Answer
-
-The current checked-in artifacts answer the portfolio question narrowly:
-
-- On the **synthetic** benchmark, HarmonicRidge improves over rolling
-  persistence at every evaluated horizon.
-- On **rolling-origin synthetic** folds, HarmonicRidge improves in all six
-  forward-in-time folds.
-- On the **tidecast prototype** benchmark, TinyTide ties persistence rather
-  than clearly beating it.
-- On **NOAA mock** fixtures, hybrid residual Ridge does **not** beat the NOAA
-  tidal prediction baseline. That is a mock/plumbing result, not live NOAA
-  evidence.
-
-Start with [docs/research-report.md](docs/research-report.md), then use
-[docs/results-summary.md](docs/results-summary.md) for a compact table and
-[docs/portfolio-case-study.md](docs/portfolio-case-study.md) for interview
-framing.
-
-## Models and Baselines
-
-- `rolling_persistence`: one-step naive baseline, `pred[t] = observed[t-1]`.
-- `noaa_prediction`: NOAA deterministic tidal prediction baseline.
-- `noaa_residual_persistence`: NOAA prediction plus rolling residual
-  persistence.
-- `harmonic_ridge`: Ridge regression over tidal harmonic, temporal, lag, and
-  rolling features.
-- `grad_boost`: scikit-learn HistGradientBoostingRegressor on the same feature
-  matrix.
-- `hybrid_residual_ridge`: NOAA prediction plus Ridge-modeled residual.
-
-Prototype names are compatibility labels, not capability claims. In reports
-and docs, `WaveGRUPrototype` is described as smoothing, `SurgeNetPrototype` as
-a residual heuristic, and `TsunamiSentinelPrototype` as an anomaly toy. Branding
-details live in [docs/model_branding.md](docs/model_branding.md).
-
-## Quickstart
+Wai uses Python 3.13 or newer and [uv](docs/getting_started.md) for setup.
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-
-make demo
-make test
-make coverage
+git clone https://github.com/dcablayan/Wai.git
+cd Wai
+uv sync --locked --all-extras
 make dashboard
 ```
 
-`make demo` regenerates the synthetic, tidecast, NOAA mock, rolling-origin,
-conformal, research visual, scientific audit, and summary artifacts. The
-dashboard is a local Streamlit viewer for the synthetic demo data.
+Streamlit prints the local address when the dashboard is ready. Open that
+address in a browser, then choose a data source from the sidebar.
 
-## Forecast Orchestrator
+If this is your first Python project, follow
+[docs/getting_started.md](docs/getting_started.md). It walks through installing
+the tools, starting the dashboard, choosing a station, understanding datums,
+and fixing common setup problems.
 
-Wai now includes deterministic Mini and multi-turn Ultra orchestration under
-`src/forecasting`, `src/orchestration`, `src/experts`, and the canonical
-Hohonu/NOAA adapters in `src/data`. It converts local Hohonu observations and
-NOAA observations/predictions into one canonical schema, routes to numerical
-experts, verifies safety constraints, and can produce historical replay and
-trajectory tables for future coordinator training.
+## Choose the right view
 
-Modes:
+Wai keeps live public data separate from model backtests so the numbers are not
+easy to misread.
 
-- `mini`: fast deterministic rule-router path.
-- `ultra`: Wai Ultra, a Fugu-inspired numerical forecast conductor with roles,
-  transcripts, access lists, workflow graphs, verifier termination, and
-  bootstrap or learned coordination policies.
-- `legacy`: original flat rule router retained for regression testing.
+| View | What it shows | What it means |
+| --- | --- | --- |
+| Live NOAA CO-OPS | Recent public observations, NOAA tide predictions, and available NOAA guidance | A live data monitor; NOAA predictions are not Wai machine-learning forecasts |
+| Synthetic backtest | Held-out model estimates, observed outcomes, uncertainty, and error | A repeatable research test using generated demo data, not a live sensor feed |
 
-Run an offline example forecast:
+In live mode, select a region or search by station name or ID. Wai downloads a
+bounded time window only for the station you choose. No NOAA API key is needed.
+Stations without published tide predictions still work as observation-only
+monitors, including Great Lakes gauges.
 
-```bash
-python -m scripts.run_orchestrated_forecast --mode mini --horizon-minutes 360
-python -m scripts.run_orchestrated_forecast --mode ultra --horizon-minutes 360
-```
-
-Generate a mocked historical replay dataset:
+The bundled station catalog makes the selector useful when NOAA discovery is
+temporarily unavailable. Refresh it with:
 
 ```bash
-python -m scripts.run_historical_replay --output reports/routing_replay_mock.csv
+make noaa-stations
 ```
 
-Train an advisory learned router from replay rows:
+## How the research pipeline works
+
+The main modeling idea is simple:
+
+1. Start with known tidal structure, such as NOAA tide predictions or harmonic
+   time features.
+2. Model the remaining difference with small statistical or machine-learning
+   methods.
+3. Compare the result with strong baselines, including persistence and the NOAA
+   tide prediction itself.
+4. Evaluate only on future, held-out time windows and report uncertainty and
+   failure cases.
+
+Run the complete offline evidence pipeline with:
 
 ```bash
-python -m scripts.train_router --replay reports/routing_replay_mock.csv
+make demo
+make test
+make coverage
 ```
 
-Run the local Ultra smoke benchmark:
+Start with [reports/summary.json](reports/summary.json) for the machine-readable
+index or [docs/research-report.md](docs/research-report.md) for the written
+research summary.
+
+### How to read the evidence
+
+| Evidence | Use it for | Do not treat it as |
+| --- | --- | --- |
+| Synthetic demo | Checking code, splits, uncertainty, and model comparisons | Real-world forecast skill |
+| NOAA-derived tidecast benchmark | Comparing simple methods on a smooth tidal signal | Noisy observed water levels |
+| NOAA mock evaluation | Testing the offline API and evaluation path | Live NOAA performance |
+| NOAA live evaluation | Comparing models and NOAA baselines on a short public-data window | Operational or seasonal validation |
+
+Mock and live NOAA results are written to different files. The scientific
+evidence audit checks that they remain separate.
+
+## Use your own tide gauge
+
+Wai can read a CSV without changing the forecasting code:
 
 ```bash
-python -m scripts.run_ultra_benchmark
+uv run python -m scripts.run_gauge_forecast \
+  --csv my_gauge.csv \
+  --station-id MY-GAUGE-01 \
+  --timestamp-col time \
+  --water-level-col level_ft \
+  --units ft
 ```
 
-See [docs/forecast_orchestrator.md](docs/forecast_orchestrator.md) for the data
-flow, station pairing, datum rules, Mini versus Ultra behavior, coordination
-protocol, training pipeline, benchmarks, and limitations.
+For a reusable station catalog or a new provider adapter, see
+[docs/onboarding_new_gauge.md](docs/onboarding_new_gauge.md).
 
-## Plugging In Any Tide Gauge
+## Advanced forecasting modes
 
-Wai's ingestion layer is provider-agnostic. Any gauge — a vendor API, a CSV
-export, an in-memory frame — plugs in through the `DataSource` registry
-(`src/data/sources.py`) and is normalized to the canonical schema, snapped to
-a regular grid at its native cadence, despiked, and datum-converted when
-per-station offsets are configured. Gauges with no NOAA counterpart still get
-tide-shaped forecasts from the `harmonic_fallback` expert, which fits
-constituents to the gauge's own history.
+Wai includes three numerical orchestration modes:
 
-Forecast directly from any gauge export:
+- `mini` is the fast default path.
+- `ultra` can coordinate several numerical experts and verification steps.
+- `legacy` keeps the original router available for regression testing.
+
+No language model generates the water-level values. Numerical experts,
+statistical combination, physical checks, and explicit fallback rules produce
+the estimates.
 
 ```bash
-python -m scripts.run_gauge_forecast \
-    --csv my_gauge.csv --station-id MY-GAUGE-01 \
-    --timestamp-col time --water-level-col level_ft --units ft
+uv run python -m scripts.run_orchestrated_forecast --mode mini --horizon-minutes 360
+uv run python -m scripts.run_orchestrated_forecast --mode ultra --horizon-minutes 360
 ```
 
-Or register stations once in a JSON catalog and forecast by id:
+Technical details are in
+[docs/forecast_orchestrator.md](docs/forecast_orchestrator.md).
 
-```bash
-python -m scripts.run_gauge_forecast --catalog data/stations.json \
-    --station-id MY-GAUGE-01
-```
+## Important limits
 
-See [docs/onboarding_new_gauge.md](docs/onboarding_new_gauge.md) for the
-catalog format, datum offsets, and how to add a provider adapter, and
-[docs/pluggability_audit.md](docs/pluggability_audit.md) for the audit that
-drove this design.
+- The checked-in demo metrics come from synthetic data and are sanity checks.
+- Short NOAA API windows do not prove seasonal or extreme-event performance.
+- The current checked-in reports do not include real wind, pressure, rainfall,
+  or wave forcing.
+- Split-conformal intervals are measured empirically because tidal time series
+  do not guarantee the assumptions behind ideal coverage.
+- Terrain in the tide animation is illustrative, not surveyed bathymetry.
+- Wai does not provide validated storm-surge, tsunami, flood, or safety alerts.
 
-Generated research visuals are written to [docs/images](docs/images):
+Read [docs/model_card.md](docs/model_card.md) for intended use, failure modes,
+and the exact evidence boundaries.
 
-- `actual_vs_predicted.svg`
-- `error_by_horizon.svg`
-- `baseline_comparison.svg`
-- `residual_plot.svg`
-
-`make dashboard` starts Streamlit when localhost port binding is available.
-In sandboxed environments that block local servers, it runs a dashboard smoke
-check instead so the reproducible path still verifies the dashboard data flow.
-
-Run a live NOAA evaluation only when network access is available:
-
-```bash
-python -m scripts.evaluate_noaa_public
-```
-
-Live mode writes `reports/noaa_live_metrics.*` and fails if any station would
-fall back to mock data. Offline mode writes mock reports only:
-
-```bash
-python -m scripts.evaluate_noaa_public --offline
-# or
-NOAA_OFFLINE=1 python -m scripts.evaluate_noaa_public
-```
-
-Run the evidence audit after any report changes:
-
-```bash
-python -m scripts.audit_scientific_evidence
-```
-
-The audit currently records that the repo is forcing-ready but not
-storm-surge-validated: numeric external columns such as `wind_speed_mps`,
-`air_pressure_hpa`, `rainfall_mm`, and `wave_height_m` are accepted by the
-feature matrix when supplied, but checked-in reports do not include real
-meteorological covariates.
-
-## Important Limitations
-
-- Synthetic demo metrics are correctness checks, not evidence of operational
-  water-level forecasting skill.
-- NOAA-derived tidecast benchmark data is smooth deterministic tidal output,
-  not noisy sensor observations.
-- The live NOAA report uses short public API windows and no meteorological
-  forcing, so it cannot validate storm-surge forecasting.
-- If no `reports/noaa_live_metrics.*` artifact is present, the live NOAA claim
-  remains open; mock reports are never a substitute.
-- Conformal intervals are split-conformal intervals; empirical coverage is
-  reported because tidal time series are not guaranteed exchangeable.
-- Report thresholds are fit on train/reference windows, not the full displayed
-  period.
-
-See [docs/model_card.md](docs/model_card.md) for scope and failure modes, and
-[docs/metrics_interpretation.md](docs/metrics_interpretation.md) for how to
-read the generated numbers.
-
-## Project Layout
+## Project map
 
 ```text
-src/          data loaders, feature engineering, models, metrics, reports
-scripts/      reproducible evaluations and report builders
-tests/        pytest suite covering leakage, baselines, reports, and artifacts
-data/demo/    synthetic and NOAA-derived demo inputs
-reports/      generated metrics and HTML/Markdown reports
-docs/         model card, modeling notes, metric interpretation, branding notes
-app.py        Streamlit dashboard for the synthetic demo track
+app.py        Streamlit control panel
+src/          data adapters, models, forecasting, and verification
+scripts/      repeatable evaluations and report builders
+tests/        unit, integration, security, and evidence tests
+data/         synthetic demo inputs and the NOAA station catalog
+reports/      generated metrics and research reports
+docs/         onboarding, model card, methods, and deeper explanations
 ```
+
+## Useful commands
+
+```bash
+make dashboard       # start the control panel
+make demo            # regenerate offline research evidence
+make test            # run the test suite
+make coverage        # enforce coverage checks
+make noaa-stations   # refresh the nationwide station catalog
+```
+
+The locked environment is stored in `uv.lock`. A pip-compatible
+`requirements.txt` is included for environments that cannot use uv.
 
 ## License
 
-MIT - see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
